@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.17)
 
 project (ftblas)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(test)
