@@ -15,4 +15,7 @@
 double ft_dnrm2(long int n, double *x, long int inc_x);
 double ori_dnrm2(long int n, double *x, long int inc_x);
 
+double ft_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y);
+double ori_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y);
+
 #endif
