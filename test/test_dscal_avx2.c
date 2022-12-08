@@ -11,12 +11,8 @@ int main(int argc, char* argv[])
 {
     int inc_x = 1;
 
-    double *vec_x;
-    double *vec_y;
-    double *vec_y_result;
-
-    double a = (double)(rand() % 100) + 0.01 * (rand() % 100);;
-
+    double *vec_x, *vec_x_result;
+    double a = 2.0;
     double t0, t1;
     double elapsed_time;
 
@@ -27,32 +23,28 @@ int main(int argc, char* argv[])
 
     int upper_limit = (sizeof(SIZE) / sizeof(int));
     int max_size = SIZE[upper_limit - 1];
-    
     const int TEST_COUNT = 20;
-    
     vec_x = (double *)malloc(sizeof(double) * max_size * 1);
-    vec_y = (double *)malloc(sizeof(double) * max_size * 1);
-    vec_y_result = (double *)malloc(sizeof(double) * max_size * 1);
-
+    vec_x_result = (double *)malloc(sizeof(double) * max_size * 1);
+    
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m = SIZE[i_count];
-
+        
         randomize_matrix(vec_x, max_size, 1);
-        randomize_matrix(vec_y, max_size, 1);
-        //Initialization y_result with y
-        for(int i = 0; i < m; i++){
-            vec_y_result[i] = vec_y[i];
+        //Initialization x_result with x
+        for(int i = 0; i <m; i++){
+            vec_x_result[i] = vec_x[i];
         }
 
         printf("\nTesting M = %d:\n",m);
-        
-        cblas_daxpy(m, a, vec_x, inc_x, vec_y_result, inc_x);
-        ori_daxpy(m, a, vec_x, inc_x, vec_y, inc_x);
+
+        cblas_dscal(m, a, vec_x_result, inc_x);
+        ori_dscal(m, a, vec_x, inc_x);
 
         double threshold = 1e-3;
-        
+
         for(int i = 0; i < m; i++){
-            if(fabs(vec_y[i] - vec_y_result[i]) >= threshold){                
+            if(fabs(vec_x[i] - vec_x_result[i]) >= threshold){
                 printf("Failed to pass the correctness verification against Intel oneMKL. Exited.\n");
                 exit(-1);
             }
@@ -63,7 +55,7 @@ int main(int argc, char* argv[])
         
         for (int t_count = 0; t_count < TEST_COUNT; t_count++) {
             // we dont need the result so we don't take the return val here.
-            ori_daxpy(m, a, vec_x, inc_x, vec_y, inc_x);
+            ori_dscal(m, a, vec_x, inc_x);
         }
 
         t1 = get_sec();
@@ -74,8 +66,6 @@ int main(int argc, char* argv[])
     }
 
     free(vec_x);
-    free(vec_y);
-    free(vec_y_result);
 
     return 0;
 }

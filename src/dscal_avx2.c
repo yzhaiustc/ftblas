@@ -4,7 +4,7 @@
 void ori_dscal_compute(long int n, double a, double *x, long int inc_x)
 {
 	for(int i = 0; i < n; i++){
-        x[i*inc_x] = a * x[inc_x];
+        x[i*inc_x] = a * x[i*inc_x];
     }
 }
 
