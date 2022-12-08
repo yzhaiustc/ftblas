@@ -12,7 +12,11 @@ int main(int argc, char* argv[])
     int inc_x = 1;
 
     double *vec_x;
-    double t0, t1, res_baseline, res_ori;
+    double *vec_y;
+
+    double res_baseline, res_ori;
+
+    double t0, t1;
     double elapsed_time;
 
     int SIZE[21];
@@ -22,17 +26,21 @@ int main(int argc, char* argv[])
 
     int upper_limit = (sizeof(SIZE) / sizeof(int));
     int max_size = SIZE[upper_limit - 1];
+    
     const int TEST_COUNT = 20;
+    
     vec_x = (double *)malloc(sizeof(double) * max_size * 1);
+    vec_y = (double *)malloc(sizeof(double) * max_size * 1);
     randomize_matrix(vec_x, max_size, 1);
+    randomize_matrix(vec_y, max_size, 1);
     
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m = SIZE[i_count];
         
         printf("\nTesting M = %d:\n",m);
         
-        res_baseline = cblas_dnrm2(m, vec_x, inc_x);
-        res_ori = ori_dnrm2(m, vec_x, inc_x);
+        res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        res_ori = ori_ddot(m, vec_x, inc_x, vec_y, inc_x);
 
         double diff = res_baseline - res_ori;
         
@@ -47,7 +55,7 @@ int main(int argc, char* argv[])
         
         for (int t_count = 0; t_count < TEST_COUNT; t_count++) {
             // we dont need the result so we don't take the return val here.
-            ori_dnrm2(m, vec_x, inc_x);
+            ori_ddot(m, vec_x, inc_x, vec_y, inc_x);
         }
 
         t1 = get_sec();
@@ -58,6 +66,7 @@ int main(int argc, char* argv[])
     }
 
     free(vec_x);
+    free(vec_y);
 
     return 0;
 }
