@@ -14,7 +14,7 @@ int main(int argc, char* argv[])
     double *vec_x;
     double *vec_y;
 
-    double res_baseline, res_ori;
+    double res_ori, res_ft;
 
     double t0, t1;
     double elapsed_time;
@@ -39,11 +39,11 @@ int main(int argc, char* argv[])
         
         printf("\nTesting M = %d:\n",m);
         
-        res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
-        res_ori = ori_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        res_ori = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        res_ft = ft_ddot(m, vec_x, inc_x, vec_y, inc_x);
 
-        double diff = res_baseline - res_ori;
-        
+        double diff = res_ori - res_ft;
+
         if (fabs(diff) > 1e-3) {
             printf("Failed to pass the correctness verification against Intel oneMKL. Exited.\n");
             exit(-1);
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
         
         for (int t_count = 0; t_count < TEST_COUNT; t_count++) {
             // we dont need the result so we don't take the return val here.
-            ori_ddot(m, vec_x, inc_x, vec_y, inc_x);
+            ft_ddot(m, vec_x, inc_x, vec_y, inc_x);
         }
 
         t1 = get_sec();
