@@ -13,28 +13,39 @@ void ori_dscal_compute(long int n, double scalar, double *x, long int inc_x)
     }
 
     // when inc_x == 1, we do this branch - the optimized one.
-    int n16 = n & -16;
+    long int n16 = n & -16;
 
-    __m256d scalar_tile = _mm256_set1_pd(scalar);
+    double *ptr_scalar = &scalar;
     
     double * curr_x_ptr = x;
-    
-    for (int i = 0; i < n16; i += 16) {
 
-        __m256d x_tile_1 = _mm256_loadu_pd(curr_x_ptr);
-        __m256d x_tile_2 = _mm256_loadu_pd(curr_x_ptr + 4);
-        __m256d x_tile_3 = _mm256_loadu_pd(curr_x_ptr + 8);
-        __m256d x_tile_4 = _mm256_loadu_pd(curr_x_ptr + 12);
-        
-        _mm256_storeu_pd(curr_x_ptr, x_tile_1 * scalar_tile);
-        _mm256_storeu_pd(curr_x_ptr + 4, x_tile_2 * scalar_tile);
-        _mm256_storeu_pd(curr_x_ptr + 8, x_tile_3 * scalar_tile);
-        _mm256_storeu_pd(curr_x_ptr + 12, x_tile_4 * scalar_tile);
+	__asm__ __volatile__(\
+        "vbroadcastsd (%1), %%ymm0;"\
+        "1:\n\t"\
+        "vmovupd (%2), %%ymm1;"\
+        "vmovupd 32(%2), %%ymm2;"\
+        "vmovupd 64(%2), %%ymm3;"\
+        "vmovupd 96(%2), %%ymm4;"\
+        "vmulpd %%ymm0, %%ymm1, %%ymm1;"\
+        "vmulpd %%ymm0, %%ymm2, %%ymm2;"\
+        "vmulpd %%ymm0, %%ymm3, %%ymm3;"\
+        "vmulpd %%ymm0, %%ymm4, %%ymm4;"\
+        "vmovupd %%ymm1, (%2);"\
+        "vmovupd %%ymm2, 32(%2);"\
+        "vmovupd %%ymm3, 64(%2);"\
+        "vmovupd %%ymm4, 96(%2);"\
+        "addq $128, %2;"\
+		"subq $16,%0;"\
+		"jnz 1b;"\
+		"vzeroupper;"\
+        :"+r"(n16),"+r"(ptr_scalar),"+r"(curr_x_ptr)\
+        :\
+        :"cc","memory","ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7","ymm8","ymm9","ymm10","ymm11","ymm12","ymm13","ymm14","ymm15"\
+    );\
 
-        curr_x_ptr += 16;
-    }
 
-    for (int i = n16; i < n; i++) {
+
+    for (int i = (n & -16); i < n; i++) {
         *curr_x_ptr = scalar * (*curr_x_ptr);
         curr_x_ptr++;
     }
