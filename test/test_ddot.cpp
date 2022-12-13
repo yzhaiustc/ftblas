@@ -35,8 +35,12 @@ int main(int argc, char* argv[])
     
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m = SIZE[i_count];
-        
-        printf("\nNon-fault Tolerant version:\n");
+
+#ifdef FT_ENABLED
+        printf("\nFault-tolerant version:\n");
+#else
+        printf("\nNon-fault-tolerant version:\n");
+#endif
         printf("Testing M = %d:\n",m);
         
         res_baseline = REF_DDOT(m, vec_x, inc_x, vec_y, inc_x);
