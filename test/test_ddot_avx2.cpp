@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m = SIZE[i_count];
         
-        printf("\nNon_ft version:\n");
+        printf("\nNon-fault Tolerant version:\n");
         printf("Testing M = %d:\n",m);
         
         res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m = SIZE[i_count];
         
-        printf("\nFt version:\n");
+        printf("\nThe Fault Tolerant version:\n");
         printf("Testing M = %d:\n",m);
         
         res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);

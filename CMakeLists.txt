@@ -9,7 +9,6 @@ add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(test)
 
-#cmake .. -DMKL_DIR=/home/yzhai015/intel/oneapi/mkl/2021.4.0/lib/cmake/mkl/MKLConfig.cmake
 find_package(MKL CONFIG REQUIRED)
 
 
