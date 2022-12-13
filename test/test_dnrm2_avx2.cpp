@@ -5,7 +5,7 @@
 #include "../include/ftblas.h"
 
 // linking with Intel oneMKL
-#include "mkl.h"
+#include "mkl_cblas.h"
 
 int main(int argc, char* argv[])
 {

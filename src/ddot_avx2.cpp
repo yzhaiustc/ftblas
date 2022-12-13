@@ -140,7 +140,7 @@ double ori_ddot_compute(long int n, double *x, long int inc_x, double *y, long i
 }
 
 // a driver layer useful for threaded version
-double ori_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y)
+double ori_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y, bool is_ft = false)
 {
 	return ori_ddot_compute(n, x, inc_x, y, inc_y);
 }
