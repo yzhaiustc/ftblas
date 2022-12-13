@@ -18,3 +18,7 @@ endif(USE_FAULT_TOLERANT)
 
 add_executable(ddot test/test_ddot.cpp)
 target_link_libraries(ddot IncludeFuncs SrcFuncs TestFuncs)
+
+if(USE_FAULT_TOLERANT)
+    target_compile_definitions(ddot PRIVATE FT_ENABLED=1)
+endif(USE_FAULT_TOLERANT)
