@@ -37,10 +37,11 @@ int main(int argc, char* argv[])
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m = SIZE[i_count];
         
-        printf("\nTesting M = %d:\n",m);
+        printf("\nNon-fault Tolerant version:\n");
+        printf("Testing M = %d:\n",m);
         
         res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
-        res_ori = ori_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        res_ori = ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
 
         double diff = res_baseline - res_ori;
         
@@ -55,7 +56,39 @@ int main(int argc, char* argv[])
         
         for (int t_count = 0; t_count < TEST_COUNT; t_count++) {
             // we dont need the result so we don't take the return val here.
-            ori_ddot(m, vec_x, inc_x, vec_y, inc_x);
+            ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        }
+
+        t1 = get_sec();
+        elapsed_time = t1 - t0;
+
+        printf("Average elasped time: %f second, performance: %f GFLOPS.\n", \
+            elapsed_time/TEST_COUNT, 2.*1e-9*TEST_COUNT * m / elapsed_time);
+    }
+
+    for (int i_count = 0; i_count < upper_limit; i_count++) {
+        int m = SIZE[i_count];
+        
+        printf("\nThe Fault Tolerant version:\n");
+        printf("Testing M = %d:\n",m);
+        
+        res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        res_ori = ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x, true);
+
+        double diff = res_baseline - res_ori;
+        
+        if (fabs(diff) > 1e-3) {
+            printf("Failed to pass the correctness verification against Intel oneMKL. Exited.\n");
+            exit(-1);
+        }else{
+            printf("Passed the sanity check, start benchmarking the performance.\n");
+        }
+        
+        t0 = get_sec();
+        
+        for (int t_count = 0; t_count < TEST_COUNT; t_count++) {
+            // we dont need the result so we don't take the return val here.
+            ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x, true);
         }
 
         t1 = get_sec();
