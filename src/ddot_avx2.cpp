@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "../include/ftblas.h"
 
 #define PREF_X(pdist)\
     "prefetcht0 "#pdist"(%1);"\
@@ -90,7 +91,7 @@ void ori_ddot_kernel(long n, double *x, double *y, double *dot)
   ORI_KERNEL
 }
 
-double ori_ddot_compute(long int n, double *x, long int inc_x, double *y, long int inc_y)
+double ftblas_ddot_ori(long int n, double *x, long int inc_x, double *y, long int inc_y)
 {
 	// it is of users' responsibility to make sure
 	// length(x) / inc_x >= n && length(y) / inc_y >= n
@@ -137,10 +138,4 @@ double ori_ddot_compute(long int n, double *x, long int inc_x, double *y, long i
 		ptr_x++; ptr_y++;
 	}
 	return res;
-}
-
-// a driver layer useful for threaded version
-double cblas_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y)
-{
-	return ori_ddot_compute(n, x, inc_x, y, inc_y);
 }

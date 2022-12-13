@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "../include/utils.h"
-#include "../include/ftblas.h"
+#include "../include/cblas.h"
 
 double REF_DDOT(long int n, double *x, long int inc_x, double *y, long int inc_y);
 

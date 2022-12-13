@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "../include/ftblas.h"
 
 #define INIT_n1(no)\
 	"vxorpd %%ymm"#no",%%ymm"#no",%%ymm"#no";"\
@@ -127,7 +128,7 @@ static long ft_ddot_kernel(long n, double *x, double *y, double *dot)
   return err_num;
 }
 
-double ft_ddot_compute(long int n, double *x, long int inc_x, double *y, long int inc_y)
+double ftblas_ddot_ft(long int n, double *x, long int inc_x, double *y, long int inc_y)
 {
 	// it is of users' responsibility to make sure
 	// length(x) / inc_x >= n && length(y) / inc_y >= n
@@ -176,10 +177,4 @@ double ft_ddot_compute(long int n, double *x, long int inc_x, double *y, long in
 		ptr_x++; ptr_y++;
 	}
 	return res;
-}
-
-// a driver layer useful for threaded version
-double ft_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y)
-{
-	return ft_ddot_compute(n, x, inc_x, y, inc_y);
 }
