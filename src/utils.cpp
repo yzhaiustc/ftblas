@@ -44,7 +44,7 @@ double get_sec()
 
 void randomize_matrix(double *A, int m, int n)
 {
-    srand(time(NULL));
+    srand(NULL);
     int i, j;
     for (i = 0; i < m; i++)
     {
