@@ -1,146 +1,506 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include "../include/ftblas.h"
+#include<unistd.h>
 
-#define PREF_X(pdist)\
-    "prefetcht0 "#pdist"(%1);"\
+static long ft_ddot_kernel(long n, double *x, double *y, double *dot)
+{
 
-#define PREF_Y(pdist)\
-    "prefetcht0 "#pdist"(%2);"\
+  long register i = 0;
+  long register err_num = 0;
+  __asm__ __volatile__(
 
-#define INIT_n1(no)\
-	"vxorpd %%ymm"#no",%%ymm"#no",%%ymm"#no";"\
+      "vxorpd		%%zmm0 , %%zmm0 , %%zmm0	             \n\t"
+      "vxorpd		%%zmm1 , %%zmm1 , %%zmm1	             \n\t"
+      "vxorpd		%%zmm2 , %%zmm2 , %%zmm2	             \n\t"
+      "vxorpd		%%zmm3 , %%zmm3 , %%zmm3	             \n\t"
 
-#define LOAD_X(no,ox)\
-	"vmovups "#ox"(%1),%%ymm"#no";"\
+      "vxorpd		%%zmm4 , %%zmm4 , %%zmm4	             \n\t"
+      "vxorpd		%%zmm5 , %%zmm5 , %%zmm5	             \n\t"
+      "vxorpd		%%zmm6 , %%zmm6 , %%zmm6	             \n\t"
+      "vxorpd		%%zmm7 , %%zmm7 , %%zmm7	             \n\t"
 
-#define LOAD_Y(no,oy)\
-	"vmovups "#oy"(%2),%%ymm"#no";"\
+      "kxnorw   %%k4   , %%k4   , %%k4                 \n\t"
 
-#define FMA(a,b,c)\
-	"vfmadd231pd %%ymm"#a",%%ymm"#b",%%ymm"#c";"\
+      /* Prologue */
+      "vmovupd       (%3, %0, 8), %%zmm16               \n\t" // X1
+      "vmovupd       (%4, %0, 8), %%zmm24               \n\t" // Y1
+      "vmovupd     64(%3, %0, 8), %%zmm17               \n\t" // X2
+      "vmovupd           %%zmm4 , %%zmm28               \n\t" // B1
+      "vmovupd     64(%4, %0, 8), %%zmm25               \n\t" // Y2
+      "vmovupd    128(%3, %0, 8), %%zmm18               \n\t" // X3
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm0            \n\t" // F1
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm4            \n\t" // F1 - dup - 0 - 4
+      "vmovupd           %%zmm5 , %%zmm29               \n\t" // B2
+      "vmovupd    128(%4, %0, 8), %%zmm26               \n\t" // Y3
+      "vmovupd    192(%3, %0, 8), %%zmm19               \n\t" // X4
 
-#define INIT_n4_1\
-	INIT_n1(0)\
-	INIT_n1(1)\
-	INIT_n1(2)\
-	INIT_n1(3)\
+      "addq		$32 , %0	  	     \n\t"
+      "subq	  $32 , %1  		     \n\t"
+      "jz 		3f		             \n\t"
 
-#define PROLOG\
-	LOAD_X(8,0)\
-	LOAD_Y(9,0)\
-	LOAD_X(10,32)\
-	FMA(8,9,0)\
-	LOAD_Y(11,32)\
-	LOAD_X(8,64)\
-	FMA(10,11,1)\
-	LOAD_Y(9,64)\
-	LOAD_X(10,96)\
+      ".p2align 4				             \n\t"
+      "1:				             \n\t"
+      "prefetcht0          1024(%3, %0, 8)                \n\t" // prefetch
+      "vpcmpeqd     %%zmm0 , %%zmm4 , %%k0                \n\t" // C1
+      "vmovupd           %%zmm28, %%zmm12                 \n\t" // chkpt - 28 - 12
+      "prefetcht0          1024(%4, %0, 8)                \n\t" // prefetch
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm1              \n\t" // F2
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm5              \n\t" // F2 - dup - 1 - 5
+      "vmovupd           %%zmm6 , %%zmm30                 \n\t" // B3
+      "vmovupd    -64(%4, %0, 8), %%zmm27                 \n\t" // Y4
+      "vmovupd       (%3, %0, 8), %%zmm16                 \n\t" // X5
 
+      "vpcmpeqd     %%zmm1 , %%zmm5 , %%k1                \n\t" // C2
+      "vmovupd           %%zmm29, %%zmm13                 \n\t" // chkpt - 29 - 13
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm2              \n\t" // F3
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm6              \n\t" // F3 - dup - 2 - 6
 
-#define EPILOG\
-	FMA(8,9,2)\
-	LOAD_Y(11,-32)\
-	FMA(10,11,3)\
+      "kandw          %%k0   , %%k1   , %%k0              \n\t" // check - red - 0 - 1
 
-#define UNROLL_1(fx,fy,f1f,ly,oy,lx,ox)\
-	FMA(fx,fy,f1f)\
-	LOAD_Y(ly,oy)\
-	LOAD_X(lx,ox)\
+      "vmovupd           %%zmm7 , %%zmm31                 \n\t" // B4
+      "vmovupd       (%4, %0, 8), %%zmm24                 \n\t" // Y5
+      "vmovupd     64(%3, %0, 8), %%zmm17                 \n\t" // X6
 
-#define POST_PROCESS\
-	"vaddpd %%ymm0,%%ymm1,%%ymm0;"\
-	"vaddpd %%ymm2,%%ymm3,%%ymm2;"\
-	"vaddpd %%ymm0,%%ymm2,%%ymm0;"\
-	"vextractf128 $1,%%ymm0,%%xmm1;"\
-	"vaddpd %%xmm0,%%xmm1,%%xmm0;"\
-	"vhaddpd %%xmm0,%%xmm0,%%xmm0;"\
-	"vmovsd %%xmm0,(%3);"\
+      "vpcmpeqd     %%zmm2 , %%zmm6 , %%k2                \n\t" // C3
+      "vmovupd           %%zmm30, %%zmm14                 \n\t" // chkpt - 30 - 14
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm3              \n\t" // F4
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm7              \n\t" // F4 - dup - 3 - 7
 
+      "prefetcht0          1152(%3, %0, 8)                \n\t" // prefetch
 
-#define ORI_KERNEL {\
-	__asm__ __volatile__(\
-		INIT_n4_1\
-		PROLOG\
-		"addq $128,%1;"\
-		"addq $128,%2;"\
-		"subq $16,%0;"\
-		"jz 2f;"\
-		"1:\n\t"\
-		UNROLL_1(8,9,2,11,-32,8,0)\
-		UNROLL_1(10,11,3,9,0,10,32)\
-		UNROLL_1(8,9,0,11,32,8,64)\
-		UNROLL_1(10,11,1,9,64,10,96)\
-		"addq $128,%1;"\
-		"addq $128,%2;"\
-		"subq $16,%0;"\
-		"jnz 1b;"\
-		"2:\n\t"\
-		EPILOG\
-		"3:\n\t"\
-		POST_PROCESS\
-		"vzeroupper;"\
-        :"+r"(n),"+r"(ptr_x),"+r"(ptr_y),"+r"(dot)\
-        ::"cc","memory","ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7","ymm8","ymm9","ymm10","ymm11","ymm12","ymm13","ymm14","ymm15"\
-    );\
+      "vmovupd           %%zmm4 , %%zmm28                 \n\t" // B5
+      "vmovupd     64(%4, %0, 8), %%zmm25                 \n\t" // Y6
+      "vmovupd    128(%3, %0, 8), %%zmm18                 \n\t" // X7
+
+      "vpcmpeqd     %%zmm3 , %%zmm7 , %%k3                \n\t" // C4
+      "vmovupd           %%zmm31, %%zmm15                 \n\t" // chkpt - 31 - 15
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm0              \n\t" // F5
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm4              \n\t" // F5 - dup - 0 - 4
+      
+      "prefetcht0          1152(%4, %0, 8)                \n\t" // prefetch
+
+      "kandw          %%k2   , %%k3   , %%k2              \n\t" // check - red - 2 - 3
+
+      "vmovupd           %%zmm5 , %%zmm29                 \n\t" // B6
+
+      "kandw          %%k0   , %%k2   , %%k0              \n\t"
+
+      "vmovupd    128(%4, %0, 8), %%zmm26                 \n\t" // Y7
+      "vmovupd    192(%3, %0, 8), %%zmm19                 \n\t" // X8
+      
+      "kxorw          %%k0   , %%k4   , %%k0              \n\t"
+
+      "addq		$32 , %0	  	     \n\t"
+
+      "ktestw         %%k0   , %%k4                       \n\t"
+      "jnz		2f		             \n\t"
+      "subq	    $32 , %1		     \n\t"
+      "jnz		1b		             \n\t"
+
+      "3:   \n\t"
+      /* Epilogue */
+      "vpcmpeqd     %%zmm0 , %%zmm4 , %%k0                \n\t" // C1
+      "vmovupd           %%zmm28, %%zmm12                 \n\t" // chkpt - 28 - 12
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm1              \n\t" // F2
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm5              \n\t" // F2 - dup - 1 - 5
+      "vmovupd           %%zmm6 , %%zmm30                 \n\t" // B3
+      "vmovupd    -64(%4, %0, 8), %%zmm27                 \n\t" // Y4
+
+      "vpcmpeqd     %%zmm1 , %%zmm5 , %%k1                \n\t" // C2
+      "vmovupd           %%zmm29, %%zmm13                 \n\t" // chkpt - 29 - 13
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm2              \n\t" // F3
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm6              \n\t" // F3 - dup - 2 - 6
+
+      "kandw          %%k0   , %%k1   , %%k0              \n\t" // check - red - 0 - 1
+
+      "vmovupd           %%zmm7 , %%zmm31                 \n\t" // B4
+
+      "vpcmpeqd     %%zmm2 , %%zmm6 , %%k2                \n\t" // C3
+      "vmovupd           %%zmm30, %%zmm14                 \n\t" // chkpt - 30 - 14
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm3              \n\t" // F4
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm7              \n\t" // F4 - dup - 3 - 7
+      
+
+      "vpcmpeqd     %%zmm3 , %%zmm7 , %%k3                \n\t" // C4
+      "vmovupd           %%zmm31, %%zmm15                 \n\t" // chkpt - 31 - 15
+
+      "kandw          %%k2   , %%k3   , %%k2              \n\t" // check - red - 2 - 3
+      "kandw          %%k0   , %%k2   , %%k0              \n\t"
+      "kxorw          %%k0   , %%k4   , %%k0              \n\t"
+      "ktestw         %%k0   , %%k4                       \n\t"
+      "jnz            6f                                  \n\t"
+
+      "5:                                                 \n\t"
+      "vaddpd       %%zmm0 , %%zmm1 , %%zmm0              \n\t"
+      "vaddpd       %%zmm2 , %%zmm3 , %%zmm2              \n\t"
+
+      "vaddpd       %%zmm0 , %%zmm2 , %%zmm0              \n\t"
+
+      "vextractf64x4     $0, %%zmm0 , %%ymm1              \n\t"
+      "vextractf64x4     $1, %%zmm0 , %%ymm2              \n\t"
+      "vaddpd       %%ymm1 , %%ymm2 , %%ymm1              \n\t"
+
+      "vextractf128	    $1 , %%ymm1 , %%xmm2	            \n\t"
+      "vaddpd       %%xmm1 , %%xmm2 , %%xmm1	            \n\t"
+      "vhaddpd      %%xmm1 , %%xmm1 , %%xmm1	            \n\t"
+
+      "vmovsd		%%xmm1 ,    (%5)		\n\t"
+      "jmp 4f     \n\t"
+
+      /* Error Handler to Loop Body */
+      "2:                                               \n\t"
+      "addq		$1 , %2	  	     \n\t"
+      "subq	    $32 , %0		     \n\t"
+      "vmovupd   -256(%3, %0, 8), %%zmm16               \n\t" // X1
+      "vmovupd   -256(%4, %0, 8), %%zmm24               \n\t" // Y1
+      "vmovupd   -192(%3, %0, 8), %%zmm17               \n\t" // X2
+      "vmovupd           %%zmm12, %%zmm0                \n\t" // restore from chkpt - 12 - 0
+      "vmovupd           %%zmm12, %%zmm4                \n\t" // restore from chkpt - 12 - 4
+      "vmovupd   -192(%4, %0, 8), %%zmm25               \n\t" // Y2
+      "vmovupd   -128(%3, %0, 8), %%zmm18               \n\t" // X3
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm0            \n\t" // F1
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm4            \n\t" // F1 - dup - 0 - 4
+      "vmovupd           %%zmm13, %%zmm1                \n\t" // restore from chkpt - 13 - 1
+      "vmovupd           %%zmm13, %%zmm5                \n\t" // restore from chkpt - 13 - 5
+      "vmovupd   -128(%4, %0, 8), %%zmm26               \n\t" // Y3
+      "vmovupd    -64(%3, %0, 8), %%zmm19               \n\t" // X4
+
+      "vpcmpeqd     %%zmm0 , %%zmm4 , %%k0                \n\t" // C1
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm1              \n\t" // F2
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm5              \n\t" // F2 - dup - 1 - 5
+      "vmovupd           %%zmm14, %%zmm2                  \n\t" // restore from chkpt - 14 - 2
+      "vmovupd           %%zmm14, %%zmm6                  \n\t" // restore from chkpt - 14 - 6
+      "vmovupd    -64(%4, %0, 8), %%zmm27                 \n\t" // Y4
+      "vmovupd       (%3, %0, 8), %%zmm16                 \n\t" // X5
+
+      "vpcmpeqd     %%zmm1 , %%zmm5 , %%k1                \n\t" // C2
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm2              \n\t" // F3
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm6              \n\t" // F3 - dup - 2 - 6
+
+      "kandw          %%k0   , %%k1   , %%k0              \n\t" // check - red - 0 - 1
+
+      "vmovupd           %%zmm15, %%zmm3                  \n\t" // restore from chkpt - 15 - 3
+      "vmovupd           %%zmm15, %%zmm7                  \n\t" // restore from chkpt - 15 - 7
+      "vmovupd       (%4, %0, 8), %%zmm24                 \n\t" // Y5
+      "vmovupd     64(%3, %0, 8), %%zmm17                 \n\t" // X6
+
+      "vpcmpeqd     %%zmm2 , %%zmm6 , %%k2                \n\t" // C3
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm3              \n\t" // F4
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm7              \n\t" // F4 - dup - 3 - 7
+      "vmovupd           %%zmm4 , %%zmm28                 \n\t" // B5
+      "vmovupd     64(%4, %0, 8), %%zmm25                 \n\t" // Y6
+      "vmovupd    128(%3, %0, 8), %%zmm18                 \n\t" // X7
+
+      "vpcmpeqd     %%zmm3 , %%zmm7 , %%k3                \n\t" // C4
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm0              \n\t" // F5
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm4              \n\t" // F5 - dup - 0 - 4
+
+      "kandw          %%k2   , %%k3   , %%k2              \n\t" // check - red - 2 - 3
+
+      "vmovupd           %%zmm5 , %%zmm29                 \n\t" // B6
+      "vmovupd    128(%4, %0, 8), %%zmm26                 \n\t" // Y7
+      "vmovupd    192(%3, %0, 8), %%zmm19                 \n\t" // X8
+
+      
+      "kandw          %%k0   , %%k2   , %%k0              \n\t"
+      "kxorw          %%k0   , %%k4   , %%k0              \n\t"
+      "ktestw         %%k0   , %%k4                       \n\t"
+      "jnz            4f                                  \n\t"
+
+      "addq		$32 , %0	  	     \n\t"
+      "subq	    $32 , %1		     \n\t"
+      "jnz		1b		             \n\t"
+
+      "jmp 3b                                             \n\t"
+
+      /* Error Handler to Epilogue */
+      "6:                                                 \n\t"
+      /* Restore From Prologue */
+      "addq		$1 , %2	  	     \n\t"
+      "vmovupd   -256(%3, %0, 8), %%zmm16               \n\t" // X1
+      "vmovupd   -256(%4, %0, 8), %%zmm24               \n\t" // Y1
+      "vmovupd   -192(%3, %0, 8), %%zmm17               \n\t" // X2
+      "vmovupd           %%zmm12, %%zmm0                \n\t" // restore from chkpt - 12 - 0
+      "vmovupd           %%zmm12, %%zmm4                \n\t" // restore from chkpt - 12 - 4
+      "vmovupd   -192(%4, %0, 8), %%zmm25               \n\t" // Y2
+      "vmovupd   -128(%3, %0, 8), %%zmm18               \n\t" // X3
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm0            \n\t" // F1
+      "vfmadd231pd  %%zmm16, %%zmm24, %%zmm4            \n\t" // F1 - dup - 0 - 4
+      "vmovupd           %%zmm13, %%zmm1                \n\t" // restore from chkpt - 13 - 1
+      "vmovupd           %%zmm13, %%zmm5                \n\t" // restore from chkpt - 13 - 5
+      "vmovupd   -128(%4, %0, 8), %%zmm26               \n\t" // Y3
+      "vmovupd    -64(%3, %0, 8), %%zmm19               \n\t" // X4
+
+      "vpcmpeqd     %%zmm0 , %%zmm4 , %%k0                \n\t" // C1
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm1              \n\t" // F2
+      "vfmadd231pd  %%zmm17, %%zmm25, %%zmm5              \n\t" // F2 - dup - 1 - 5
+      "vmovupd           %%zmm14, %%zmm2                  \n\t" // restore from chkpt - 14 - 2
+      "vmovupd           %%zmm14, %%zmm6                  \n\t" // restore from chkpt - 14 - 6
+      "vmovupd    -64(%4, %0, 8), %%zmm27                 \n\t" // Y4
+
+      "vpcmpeqd     %%zmm1 , %%zmm5 , %%k1                \n\t" // C2
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm2              \n\t" // F3
+      "vfmadd231pd  %%zmm18, %%zmm26, %%zmm6              \n\t" // F3 - dup - 2 - 6
+
+      "kandw          %%k0   , %%k1   , %%k0              \n\t" // check - red - 0 - 1
+
+      "vmovupd           %%zmm15, %%zmm3                  \n\t" // restore from chkpt - 15 - 3
+      "vmovupd           %%zmm15, %%zmm7                  \n\t" // restore from chkpt - 15 - 7
+
+      "vpcmpeqd     %%zmm2 , %%zmm6 , %%k2                \n\t" // C3
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm3              \n\t" // F4
+      "vfmadd231pd  %%zmm19, %%zmm27, %%zmm7              \n\t" // F4 - dup - 3 - 7
+      
+      "vpcmpeqd     %%zmm3 , %%zmm7 , %%k3                \n\t" // C4
+
+      "kandw          %%k2   , %%k3   , %%k2              \n\t" // check - red - 2 - 3
+      "kandw          %%k0   , %%k2   , %%k0              \n\t"
+      "kxorw          %%k0   , %%k4   , %%k0              \n\t"
+      "ktestw         %%k0   , %%k4                       \n\t"
+      "jnz            4f                                  \n\t"
+
+      "jmp 5b                                             \n\t"
+
+      "7: \n\t" // if still incorrect
+      "addq		$1 , %2	  	     \n\t"
+
+      "4: \n\t" // exit
+      "vzeroupper				\n\t"
+      : "+r"(i), // 0
+        "+r"(n), // 1
+        "+r"(err_num)  // 2
+      : "r"(x),  // 3
+        "r"(y),  // 4
+        "r"(dot) // 5
+      : "cc",
+        "%xmm0", "%xmm1", "%xmm2", "%xmm3",
+        "%xmm4", "%xmm5", "%xmm6", "%xmm7",
+        "%xmm8", "%xmm9", "%xmm10", "%xmm11",
+        "%xmm12", "%xmm13", "%xmm14", "%xmm15",
+        "memory");
+
+  return err_num;
+
 }
 
-void ori_ddot_kernel(long n, double *x, double *y, double *dot)
+static void ori_ddot_kernel(long n, double *x, double *y, double *dot)
 {
-  double *ptr_x=x,*ptr_y=y;
-  ORI_KERNEL
+  long register i = 0;
+
+  __asm__ __volatile__(
+
+      "vxorpd		%%zmm0 , %%zmm0 , %%zmm0	             \n\t"
+      "vxorpd		%%zmm1 , %%zmm1 , %%zmm1	             \n\t"
+      "vxorpd		%%zmm2 , %%zmm2 , %%zmm2	             \n\t"
+      "vxorpd		%%zmm3 , %%zmm3 , %%zmm3	             \n\t"
+
+      ".p2align 4				             \n\t"
+      "1:				             \n\t"
+	    "prefetcht0          1024(%3, %0, 8)              \n\t"
+      "vmovupd       (%3, %0, 8), %%zmm24               \n\t"
+      "vmovupd     64(%3, %0, 8), %%zmm25               \n\t"
+	    "prefetcht0          1152(%3, %0, 8)              \n\t"
+      "vmovupd    128(%3, %0, 8), %%zmm26               \n\t"
+      "vmovupd    192(%3, %0, 8), %%zmm27               \n\t"
+	    "prefetcht0          1024(%2, %0, 8)              \n\t"
+      "vfmadd231pd     (%2, %0, 8), %%zmm24, %%zmm0     \n\t"
+      "vfmadd231pd   64(%2, %0, 8), %%zmm25, %%zmm1     \n\t"
+	    "prefetcht0          1152(%2, %0, 8)              \n\t"
+      "vfmadd231pd  128(%2, %0, 8), %%zmm26, %%zmm2     \n\t"
+      "vfmadd231pd  192(%2, %0, 8), %%zmm27, %%zmm3     \n\t"
+      "addq		$32 , %0	  	     \n\t"
+      "subq	    $32 , %1		     \n\t"
+      "jnz		1b		             \n\t"
+
+      "3:   \n\t"
+      "vaddpd       %%zmm0 , %%zmm1 , %%zmm0              \n\t"
+      "vaddpd       %%zmm2 , %%zmm3 , %%zmm2              \n\t"
+
+      "vaddpd       %%zmm0 , %%zmm2 , %%zmm0              \n\t"
+
+      "vextractf64x4     $0, %%zmm0 , %%ymm1              \n\t"
+      "vextractf64x4     $1, %%zmm0 , %%ymm2              \n\t"
+      "vaddpd       %%ymm1 , %%ymm2 , %%ymm1              \n\t"
+
+      "vextractf128	    $1 , %%ymm1 , %%xmm2	            \n\t"
+      "vaddpd       %%xmm1 , %%xmm2 , %%xmm1	            \n\t"
+      "vhaddpd      %%xmm1 , %%xmm1 , %%xmm1	            \n\t"
+
+      "vmovsd		%%xmm1 ,    (%4)		\n\t"
+      "vzeroupper				\n\t"
+
+      : "+r"(i), // 0
+        "+r"(n)  // 1
+      : "r"(x),  // 2
+        "r"(y),  // 3
+        "r"(dot) // 4
+      : "cc",
+        "%xmm0", "%xmm1", "%xmm2", "%xmm3",
+        "%xmm4", "%xmm5", "%xmm6", "%xmm7",
+        "%xmm8", "%xmm9", "%xmm10", "%xmm11",
+        "%xmm12", "%xmm13", "%xmm14", "%xmm15",
+        "memory");
 }
 
-double ori_ddot_compute(long int n, double *x, long int inc_x, double *y, long int inc_y)
+double my_ft_dot_compute(long int n, double *x, long int inc_x, double *y, long int inc_y)
 {
-	// it is of users' responsibility to make sure
-	// length(x) / inc_x >= n && length(y) / inc_y >= n
-	double res = 0.;
-	if (inc_x != 1 || inc_y != 1)
+	long int i=0;
+	long int ix=0,iy=0;
+	double  dot = 0.0 ;
+	
+	if ( n <= 0 )  return(dot);
+
+	if ( (inc_x == 1) && (inc_y == 1) )
 	{
-		long int cnt_i = 0, n4 = n & -4;
-		long int inc_x2 = 2 * inc_x, inc_x3 = 3 * inc_x, inc_x4 = 4 * inc_x;
-		long int inc_y2 = 2 * inc_y, inc_y3 = 3 * inc_y, inc_y4 = 4 * inc_y;
-		double res_tmp1 = 0., res_tmp2 = 0., res_tmp3 = 0., res_tmp4 = 0.;
-		double *ptr_x = x, *ptr_y = y;
-		for (cnt_i = 0; cnt_i < n4; cnt_i += 4)
+		long int n1 = n & -32;
+		if ( n1 )
 		{
-			res_tmp1 += *(ptr_x) * *(ptr_y);
-			res_tmp2 += *(ptr_x+inc_x) * *(ptr_y+inc_y);
-			res_tmp3 += *(ptr_x+inc_x2) * *(ptr_y+inc_y2);
-			res_tmp4 += *(ptr_x+inc_x3) * *(ptr_y+inc_y3);
-			ptr_x += inc_x4; ptr_y += inc_y4;
+			long int err_num = ft_ddot_kernel(n1, x, y , &dot );
+			if (err_num) printf("detected error number: %ld\n", err_num);
 		}
-		res += res_tmp1 + res_tmp2 + res_tmp3 + res_tmp4;
-
-		if (n4 == n) return res;
-		for (cnt_i = n4; cnt_i < n; cnt_i++) 
+		i = n1;
+		while(i < n)
 		{
-			res += *(ptr_x) * *(ptr_y);
-			ptr_x+=inc_x; ptr_y+=inc_y;
+			dot += y[i] * x[i] ;
+			i++ ;
 		}
-		return res;
+		return(dot);
 	}
 
-	long int n16 = n & -16;
-	double res_dot = 0.;
-	if (n16) 
-  	{
-    	ori_ddot_kernel(n16, x, y , &res_dot);
-  	}
-	long int cnt_i = n16;
-	double *ptr_x = x + n16, *ptr_y = y + n16;
-	res = res_dot;
-	if (n16 == n) return res;
-	for (; cnt_i < n; cnt_i++)
+	double temp1 = 0.0;
+	double temp2 = 0.0;
+    long int n1 = n & -4;
+
+	while(i < n1)
 	{
-		res += *(ptr_x) * *(ptr_y);
-		ptr_x++; ptr_y++;
+		double m1 = y[iy]       * x[ix] ;
+		double m2 = y[iy+inc_y] * x[ix+inc_x] ;
+		double m3 = y[iy+2*inc_y] * x[ix+2*inc_x] ;
+		double m4 = y[iy+3*inc_y] * x[ix+3*inc_x] ;
+		ix  += inc_x*4 ;
+		iy  += inc_y*4 ;
+		temp1 += m1+m3;
+		temp2 += m2+m4;
+		i+=4 ;
+	}
+
+	while(i < n)
+	{
+		temp1 += y[iy] * x[ix] ;
+		ix  += inc_x ;
+		iy  += inc_y ;
+		i++ ;
+	}
+	dot = temp1 + temp2;
+	return(dot);
+}
+
+double my_ori_dot_compute(long int n, double *x, long int inc_x, double *y, long int inc_y)
+{
+	long int i=0;
+	long int ix=0,iy=0;
+	double  dot = 0.0 ;
+	if ( n <= 0 )  return(dot);
+	if ( (inc_x == 1) && (inc_y == 1) )
+	{
+		long int n1 = n & -32;
+		if ( n1 )
+			ori_ddot_kernel(n1, x, y , &dot );
+		i = n1;
+		while(i < n)
+		{
+			dot += y[i] * x[i] ;
+			i++ ;
+		}
+		return(dot);
+	}
+
+	double temp1 = 0.0;
+	double temp2 = 0.0;
+    long int n1 = n & -4;
+
+	while(i < n1)
+	{
+
+		double m1 = y[iy]       * x[ix] ;
+		double m2 = y[iy+inc_y] * x[ix+inc_x] ;
+		double m3 = y[iy+2*inc_y] * x[ix+2*inc_x] ;
+		double m4 = y[iy+3*inc_y] * x[ix+3*inc_x] ;
+		ix  += inc_x*4 ;
+		iy  += inc_y*4 ;
+		temp1 += m1+m3;
+		temp2 += m2+m4;
+		i+=4 ;
+	}
+
+	while(i < n)
+	{
+		temp1 += y[iy] * x[ix] ;
+		ix  += inc_x ;
+		iy  += inc_y ;
+		i++ ;
+	}
+	dot = temp1 + temp2;
+	return dot;
+
+}
+
+double ft_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y, bool is_ft)
+{
+    double res=0.;
+    int tid,TOTAL_THREADS=atoi(getenv("OMP_NUM_THREADS"));
+	if (TOTAL_THREADS<=1)
+	{
+		res+=my_ft_dot_compute(n,x,inc_x,y,inc_y);
+		return res;
+	}
+	int max_cpu_num=(int)sysconf(_SC_NPROCESSORS_ONLN);
+	if (TOTAL_THREADS>max_cpu_num) TOTAL_THREADS=max_cpu_num;
+    #pragma omp parallel for schedule(static) reduction(+:res)
+    for(tid=0;tid<TOTAL_THREADS;tid++)
+    {
+        long int NUM_DIV_NUM_THREADS=n/TOTAL_THREADS*TOTAL_THREADS;
+        long int DIM_LEN=n/TOTAL_THREADS;
+        long int EDGE_LEN = (NUM_DIV_NUM_THREADS == n)?n/TOTAL_THREADS:n-NUM_DIV_NUM_THREADS+DIM_LEN;
+        if (tid==0) res+=my_ft_dot_compute(EDGE_LEN,x,inc_x,y,inc_y);
+        else res+=my_ft_dot_compute(DIM_LEN,x+EDGE_LEN+(tid-1)*DIM_LEN,inc_x,y+EDGE_LEN+(tid-1)*DIM_LEN,inc_y);
 	}
 	return res;
 }
 
-// a driver layer useful for threaded version
-double ori_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y, bool is_ft = false)
+double ori_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y, bool is_ft)
 {
-	return ori_ddot_compute(n, x, inc_x, y, inc_y);
+    double res=0.;
+    int tid,TOTAL_THREADS=atoi(getenv("OMP_NUM_THREADS"));
+	if (TOTAL_THREADS<=1)
+	{
+		res+=my_ori_dot_compute(n,x,inc_x,y,inc_y);
+		return res;
+	}
+	int max_cpu_num=(int)sysconf(_SC_NPROCESSORS_ONLN);
+	if (TOTAL_THREADS>max_cpu_num) TOTAL_THREADS=max_cpu_num;
+    #pragma omp parallel for schedule(static) reduction(+:res)
+    for(tid=0;tid<TOTAL_THREADS;tid++)
+    {
+        long int NUM_DIV_NUM_THREADS=n/TOTAL_THREADS*TOTAL_THREADS;
+        long int DIM_LEN=n/TOTAL_THREADS;
+        long int EDGE_LEN = (NUM_DIV_NUM_THREADS == n)?n/TOTAL_THREADS:n-NUM_DIV_NUM_THREADS+DIM_LEN;
+        if (tid==0) res+=my_ori_dot_compute(EDGE_LEN,x,inc_x,y,inc_y);
+        else res+=my_ori_dot_compute(DIM_LEN,x+EDGE_LEN+(tid-1)*DIM_LEN,inc_x,y+EDGE_LEN+(tid-1)*DIM_LEN,inc_y);
+	}
+	return res;
+}
+
+double ftblas_ddot(const int n, const double *x, const int inc_x, const double *y, const int inc_y, bool is_ft)
+{
+  double res;
+  if(is_ft == false)
+  {
+    res = ori_ddot((long int)n, (double *)x, (long int)inc_x, (double *)y, (long int)inc_y, is_ft);
+    return res;
+  }
+  else
+  {
+    res = ft_ddot((long int)n, (double *)x, (long int)inc_x, (double *)y, (long int)inc_y, is_ft);
+    return res;
+  }
 }
