@@ -4,8 +4,7 @@
 #include "../include/utils.h"
 #include "../include/ftblas.h"
 
-// linking with Intel oneMKL
-#include "mkl.h"
+double REF_DDOT(long int n, double *x, long int inc_x, double *y, long int inc_y);
 
 int main(int argc, char* argv[])
 {
@@ -40,13 +39,13 @@ int main(int argc, char* argv[])
         printf("\nNon-fault Tolerant version:\n");
         printf("Testing M = %d:\n",m);
         
-        res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
-        res_ori = ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        res_baseline = REF_DDOT(m, vec_x, inc_x, vec_y, inc_x);
+        res_ori = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
 
         double diff = res_baseline - res_ori;
-        
+
         if (fabs(diff) > 1e-3) {
-            printf("Failed to pass the correctness verification against Intel oneMKL. Exited.\n");
+            printf("Failed to pass the correctness verification. Exited.\n");
             exit(-1);
         }else{
             printf("Passed the sanity check, start benchmarking the performance.\n");
@@ -56,39 +55,7 @@ int main(int argc, char* argv[])
         
         for (int t_count = 0; t_count < TEST_COUNT; t_count++) {
             // we dont need the result so we don't take the return val here.
-            ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
-        }
-
-        t1 = get_sec();
-        elapsed_time = t1 - t0;
-
-        printf("Average elasped time: %f second, performance: %f GFLOPS.\n", \
-            elapsed_time/TEST_COUNT, 2.*1e-9*TEST_COUNT * m / elapsed_time);
-    }
-
-    for (int i_count = 0; i_count < upper_limit; i_count++) {
-        int m = SIZE[i_count];
-        
-        printf("\nThe Fault Tolerant version:\n");
-        printf("Testing M = %d:\n",m);
-        
-        res_baseline = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
-        res_ori = ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x, true);
-
-        double diff = res_baseline - res_ori;
-        
-        if (fabs(diff) > 1e-3) {
-            printf("Failed to pass the correctness verification against Intel oneMKL. Exited.\n");
-            exit(-1);
-        }else{
-            printf("Passed the sanity check, start benchmarking the performance.\n");
-        }
-        
-        t0 = get_sec();
-        
-        for (int t_count = 0; t_count < TEST_COUNT; t_count++) {
-            // we dont need the result so we don't take the return val here.
-            ftblas_ddot(m, vec_x, inc_x, vec_y, inc_x, true);
+            cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
         }
 
         t1 = get_sec();
@@ -102,4 +69,12 @@ int main(int argc, char* argv[])
     free(vec_y);
 
     return 0;
+}
+
+double REF_DDOT(long int n, double *x, long int inc_x, double *y, long int inc_y) {
+    double result = 0.;
+    for (int cnt_x = 0, cnt_y = 0; cnt_x < n && cnt_y < n; cnt_x += inc_x, cnt_y += inc_y) {
+        result += (x[cnt_x] * y[cnt_y]);
+    }
+    return result;
 }

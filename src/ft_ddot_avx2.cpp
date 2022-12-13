@@ -1,23 +1,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define PREF_X(pdist)\
-    "prefetcht0 "#pdist"(%1);"\
-
-#define PREF_Y(pdist)\
-    "prefetcht0 "#pdist"(%2);"\
-
 #define INIT_n1(no)\
 	"vxorpd %%ymm"#no",%%ymm"#no",%%ymm"#no";"\
 
 #define LOAD_X(no,ox)\
-	"vmovups "#ox"(%1),%%ymm"#no";"\
+	"vmovups "#ox"(%2),%%ymm"#no";"\
 
 #define LOAD_Y(no,oy)\
-	"vmovups "#oy"(%2),%%ymm"#no";"\
+	"vmovups "#oy"(%3),%%ymm"#no";"\
 
 #define FMA(a,b,c)\
 	"vfmadd231pd %%ymm"#a",%%ymm"#b",%%ymm"#c";"\
+
+#define FMA_2(a,b,c,d)\
+	"vfmadd231pd %%ymm"#a",%%ymm"#b",%%ymm"#c";"\
+	"vfmadd231pd %%ymm"#a",%%ymm"#b",%%ymm"#d";"\
+
+#define BACK(a,b)\
+	"vmovups %%ymm"#a",%%ymm"#b";"
+
+#define COMPARE(a,b,c)\
+	"vpcmpeqd %%ymm"#a",%%ymm"#b",%%ymm"#c";"\
+
+#define EXTRACT(ymm,reg)\
+	"vmovmskpd %%ymm"#ymm","#reg";"\
 
 #define INIT_n4_1\
 	INIT_n1(0)\
@@ -29,21 +36,32 @@
 	LOAD_X(8,0)\
 	LOAD_Y(9,0)\
 	LOAD_X(10,32)\
-	FMA(8,9,0)\
+	FMA_2(8,9,0,4)\
 	LOAD_Y(11,32)\
 	LOAD_X(8,64)\
-	FMA(10,11,1)\
+	COMPARE(0,4,12)\
+	FMA_2(10,11,1,5)\
 	LOAD_Y(9,64)\
+	BACK(2,14)\
 	LOAD_X(10,96)\
 
 
 #define EPILOG\
-	FMA(8,9,2)\
+	EXTRACT(12,%%r10d)\
+	COMPARE(1,5,13)\
+	FMA_2(8,9,2,6)\
 	LOAD_Y(11,-32)\
-	FMA(10,11,3)\
+	EXTRACT(13,%%r11d)\
+	COMPARE(2,6,14)\
+	FMA_2(10,11,3,7)\
+	EXTRACT(14,%%r12d)\
+	COMPARE(3,7,15)\
+	EXTRACT(15,%%r13d)\
 
-#define UNROLL_1(fx,fy,f1f,ly,oy,lx,ox)\
-	FMA(fx,fy,f1f)\
+#define UNROLL_1(cmp_e,ex,f1c,f2c,cmp_f,fx,fy,f1f,f2f,ly,oy,lx,ox)\
+	EXTRACT(cmp_e,ex)\
+	COMPARE(f1c,f2c,cmp_f)\
+	FMA_2(fx,fy,f1f,f2f)\
 	LOAD_Y(ly,oy)\
 	LOAD_X(lx,ox)\
 
@@ -54,43 +72,62 @@
 	"vextractf128 $1,%%ymm0,%%xmm1;"\
 	"vaddpd %%xmm0,%%xmm1,%%xmm0;"\
 	"vhaddpd %%xmm0,%%xmm0,%%xmm0;"\
-	"vmovsd %%xmm0,(%3);"\
+	"vmovsd %%xmm0,(%4);"\
 
+#define INIT_n4_2\
+	INIT_n1(4)\
+	INIT_n1(5)\
+	INIT_n1(6)\
+	INIT_n1(7)\
 
-#define ORI_KERNEL {\
+#define FT_KERNEL {\
 	__asm__ __volatile__(\
 		INIT_n4_1\
+		INIT_n4_2\
+		"mov $15,%%r14d;"\
 		PROLOG\
-		"addq $128,%1;"\
 		"addq $128,%2;"\
+		"addq $128,%3;"\
 		"subq $16,%0;"\
 		"jz 2f;"\
 		"1:\n\t"\
-		UNROLL_1(8,9,2,11,-32,8,0)\
-		UNROLL_1(10,11,3,9,0,10,32)\
-		UNROLL_1(8,9,0,11,32,8,64)\
-		UNROLL_1(10,11,1,9,64,10,96)\
-		"addq $128,%1;"\
+		UNROLL_1(12,%%r10d,1,5,13,8,9,2,6,11,-32,8,0)\
+		UNROLL_1(13,%%r11d,2,6,14,10,11,3,7,9,0,10,32)\
+		"and %%r11d,%%r10d;"\
+		UNROLL_1(14,%%r12d,3,7,15,8,9,0,4,11,32,8,64)\
+		"and %%r12d,%%r10d;"\
+		UNROLL_1(15,%%r13d,0,4,12,10,11,1,5,9,64,10,96)\
+		"and %%r13d,%%r10d;"\
 		"addq $128,%2;"\
+		"and %%r13d,%%r10d;"\
+		"addq $128,%3;"\
+		"cmp %%r14d,%%r10d;"\
+		"jne 4f;"\
 		"subq $16,%0;"\
 		"jnz 1b;"\
 		"2:\n\t"\
 		EPILOG\
 		"3:\n\t"\
 		POST_PROCESS\
+		"jmp 5f;"\
+		"4:\n\t"\
+		"addq $1,%1;"\
+		"5:\n\t"\
 		"vzeroupper;"\
-        :"+r"(n),"+r"(ptr_x),"+r"(ptr_y),"+r"(dot)\
-        ::"cc","memory","ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7","ymm8","ymm9","ymm10","ymm11","ymm12","ymm13","ymm14","ymm15"\
+        :"+r"(n),"+r"(err_num),"+r"(ptr_x),"+r"(ptr_y),"+r"(dot)\
+        ::"cc","memory","ymm0","ymm1","ymm2","ymm3","ymm4","ymm5","ymm6","ymm7","ymm8","ymm9","ymm10","ymm11","ymm12","ymm13","ymm14","ymm15","r10","r11","r12","r13","r14"\
     );\
 }
 
-void ori_ddot_kernel(long n, double *x, double *y, double *dot)
+static long ft_ddot_kernel(long n, double *x, double *y, double *dot)
 {
+  long register err_num = 0;
   double *ptr_x=x,*ptr_y=y;
-  ORI_KERNEL
+  FT_KERNEL
+  return err_num;
 }
 
-double ori_ddot_compute(long int n, double *x, long int inc_x, double *y, long int inc_y)
+double ft_ddot_compute(long int n, double *x, long int inc_x, double *y, long int inc_y)
 {
 	// it is of users' responsibility to make sure
 	// length(x) / inc_x >= n && length(y) / inc_y >= n
@@ -123,9 +160,11 @@ double ori_ddot_compute(long int n, double *x, long int inc_x, double *y, long i
 
 	long int n16 = n & -16;
 	double res_dot = 0.;
+	long int err_num;
 	if (n16) 
   	{
-    	ori_ddot_kernel(n16, x, y , &res_dot);
+    	err_num = ft_ddot_kernel(n16, x, y , &res_dot);
+		if (err_num) printf("detected error number: %ld\n", err_num);
   	}
 	long int cnt_i = n16;
 	double *ptr_x = x + n16, *ptr_y = y + n16;
@@ -140,7 +179,7 @@ double ori_ddot_compute(long int n, double *x, long int inc_x, double *y, long i
 }
 
 // a driver layer useful for threaded version
-double cblas_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y)
+double ft_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y)
 {
-	return ori_ddot_compute(n, x, inc_x, y, inc_y);
+	return ft_ddot_compute(n, x, inc_x, y, inc_y);
 }
