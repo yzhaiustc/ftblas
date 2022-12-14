@@ -12,12 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-double ft_dnrm2(long int n, double *x, long int inc_x);
-double ori_dnrm2(long int n, double *x, long int inc_x);
-void ori_daxpy(long int n, double a, double *x, long int inc_x, double *y, long int inc_y);
-void ori_dscal(long int n, double a, double *x, long int inc_x);
-
-double ft_ddot(long int n, double *x, long int inc_x, double *y, long int inc_y);
-double ftblas_ddot(const int n, const double *x, const int inc_x, const double *y, const int inc_y, bool is_ft = false);
+double ftblas_ddot_ori(long int n, double *x, long int inc_x, double *y, long int inc_y);
+double ftblas_ddot_ft(long int n, double *x, long int inc_x, double *y, long int inc_y);
 
 #endif
