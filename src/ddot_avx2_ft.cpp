@@ -128,7 +128,7 @@ static long ft_ddot_kernel(long n, double *x, double *y, double *dot)
   return err_num;
 }
 
-double ftblas_ddot_ft(long int n, double *x, long int inc_x, double *y, long int inc_y)
+double ftblas_ddot_ft(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y)
 {
 	// it is of users' responsibility to make sure
 	// length(x) / inc_x >= n && length(y) / inc_y >= n
@@ -139,7 +139,7 @@ double ftblas_ddot_ft(long int n, double *x, long int inc_x, double *y, long int
 		long int inc_x2 = 2 * inc_x, inc_x3 = 3 * inc_x, inc_x4 = 4 * inc_x;
 		long int inc_y2 = 2 * inc_y, inc_y3 = 3 * inc_y, inc_y4 = 4 * inc_y;
 		double res_tmp1 = 0., res_tmp2 = 0., res_tmp3 = 0., res_tmp4 = 0.;
-		double *ptr_x = x, *ptr_y = y;
+		double *ptr_x = (double *)x, *ptr_y = (double *)y;
 		for (cnt_i = 0; cnt_i < n4; cnt_i += 4)
 		{
 			res_tmp1 += *(ptr_x) * *(ptr_y);
@@ -164,11 +164,11 @@ double ftblas_ddot_ft(long int n, double *x, long int inc_x, double *y, long int
 	long int err_num;
 	if (n16) 
   	{
-    	err_num = ft_ddot_kernel(n16, x, y , &res_dot);
+		err_num = ft_ddot_kernel(n16, (double *)x, (double *)y , &res_dot);
 		if (err_num) printf("detected error number: %ld\n", err_num);
   	}
 	long int cnt_i = n16;
-	double *ptr_x = x + n16, *ptr_y = y + n16;
+	double *ptr_x = (double *)x + n16, *ptr_y = (double *)y + n16;
 	res = res_dot;
 	if (n16 == n) return res;
 	for (; cnt_i < n; cnt_i++)
