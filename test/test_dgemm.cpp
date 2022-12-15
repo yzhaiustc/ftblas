@@ -80,12 +80,14 @@ int main(int argc, char* argv[])
 void REF_DGEMM(int m, int n, int k, double *a, double *b, double *c) {
     int lda = m, ldb = k, ldc = m;
 
+// column major
 #define a(i, j) a[(i) + (j) * lda]
 #define b(i, j) b[(i) + (j) * ldb]
 #define c(i, j) c[(i) + (j) * ldc]
 
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
+            // only testing alpha = 1, beta = 0.
             double result = 0.;
             for (int p = 0; p < k; p++) {
                 result += a(i, p) * b(p, j);
