@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
+#include <stdbool.h>
 
 void print_vector(double *vec, int n)
 {
@@ -72,7 +73,7 @@ void copy_matrix(double *src, double *dest, int n)
     }
 }
 
-void verify_matrix(double *mat1, double *mat2, int n)
+bool verify_matrix(double *mat1, double *mat2, int n)
 {
     double diff = 0.0;
     int i;
@@ -82,9 +83,11 @@ void verify_matrix(double *mat1, double *mat2, int n)
         if (diff > 1e-6) break;
     }
     if (i != n) {
-        printf("error. The diff is %f.\n", diff);
+        printf("Failed to pass the sanity check. The diff is %f.\n", diff);
+        return false;
     }
     else{
-        printf("correct!\n");
+        printf("Passed the sanity check.\n");
+        return true;
     }
 }
