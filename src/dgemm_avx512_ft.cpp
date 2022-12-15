@@ -1000,9 +1000,10 @@ void ftblas_dgemm_ft(\
         }
         // print_vector(chk_online_C_row,N);
         // print_vector(chk_c_row,N);
-        int v_chks_col=verify_chks(chk_online_C_col,chk_c_col,M);
-        int v_chks_row=verify_chks(chk_online_C_row,chk_c_row,N);
-        printf("correcting (%d,%d):\n",v_chks_row,v_chks_col);
+        // int v_chks_col=verify_chks(chk_online_C_col,chk_c_col,M);
+        // int v_chks_row=verify_chks(chk_online_C_row,chk_c_row,N);
+
+        // printf("correcting (%d,%d):\n",v_chks_row,v_chks_col);
         // if (v_chks_col==-1||v_chks_row==-1) {
         //   printf("too many errors, unable to recover!\n");
         //   return;

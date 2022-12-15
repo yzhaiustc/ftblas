@@ -36,8 +36,10 @@ int main(int argc, char* argv[])
     
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m, n, k;
+        double alpha, beta;
         m = n = k = SIZE[i_count];
-
+        alpha = 1.;
+        beta = 0.;
 #ifdef FT_ENABLED
         printf("\nFault-tolerant version:\n");
 #else
@@ -46,7 +48,7 @@ int main(int argc, char* argv[])
         printf("Testing M = %d:\n",m);
         
         REF_DGEMM(m, n, k, a, b, c_ref);
-        cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1., a, m, b, k, 1., c, m);
+        cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, n, k, alpha, a, m, b, k, beta, c, m);
 
         bool is_verified = verify_matrix(c_ref, c, m * n);
 
@@ -84,9 +86,9 @@ void REF_DGEMM(int m, int n, int k, double *a, double *b, double *c) {
 
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
-            double result = c(i, j);
+            double result = 0.;
             for (int p = 0; p < k; p++) {
-                result += a(i, k) * b(k, j);
+                result += a(i, p) * b(p, j);
             }
             c(i, j) = result;
         }
