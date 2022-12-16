@@ -776,7 +776,7 @@ void GEMM_ICOPY(int m_from,int m_dim,int k_from,int k_dim,double *A,int lda,char
   if(transa=='N' || transa=='n') dgemm_tcopy_16(A+(int64_t)lda*(int64_t)k_from+m_from,sa,lda,m_dim,k_dim);
   else dgemm_ncopy_16(A+(int64_t)lda*(int64_t)m_from+k_from,sa,lda,k_dim,m_dim);
 }
-void GEMM_OCOPY(int k_from,int k_dim,int n_from,int n_dim,double *B,int ldb,char transb,double *sb){
+void GEMM_OCOPY(int k_from,int k_dim,int n_from,int n_dim,double *B,int ldb,double *sb){
   dgemm_ncopy_2(B+(int64_t)ldb*(int64_t)n_from+k_from,sb,ldb,k_dim,n_dim);
 }
 //#define GEMM_R_M 1152
