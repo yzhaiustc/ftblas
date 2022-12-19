@@ -22,4 +22,14 @@ void cblas_dsymm(const CBLAS_ORDER Layout, const CBLAS_SIDE side, const CBLAS_UP
     const double *a, const FTBLAS_INT lda, const double *b, const FTBLAS_INT ldb,\
     const double beta, double *c, const FTBLAS_INT ldc);
 
+void cblas_dtrmm(const CBLAS_ORDER Layout, const CBLAS_SIDE side, const CBLAS_UPLO uplo, \
+    const CBLAS_TRANSPOSE transa, const CBLAS_DIAG diag, \
+    const FTBLAS_INT m, const FTBLAS_INT n, const double alpha, \
+    const double *a, const FTBLAS_INT lda, const double *b, const FTBLAS_INT ldb);
+
+void cblas_dtrsm(const CBLAS_ORDER Layout, const CBLAS_SIDE side, const CBLAS_UPLO uplo, \
+    const CBLAS_TRANSPOSE transa, const CBLAS_DIAG diag, \
+    const FTBLAS_INT m, const FTBLAS_INT n, const double alpha, \
+    const double *a, const FTBLAS_INT lda, const double *b, const FTBLAS_INT ldb);
+
 #endif

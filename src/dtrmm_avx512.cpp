@@ -1,9 +1,6 @@
-//gcc -O2 -march=skylake-avx512 -fopenmp --shared -fPIC dgemm.c -o dgemm.so
-//16x2
 #define A(i,j) A[(i)+(j)*lda]
-#include <immintrin.h>
-
 #include "../include/ftblas.h"
+#include <immintrin.h>
 //#define TIMING 1
 #define KERNEL_h_k1m24n1 \
   "vmovupd (%0),%%zmm1; vmovupd 64(%0),%%zmm2; vmovupd 128(%0),%%zmm3; addq $192,%0;"\
@@ -287,6 +284,68 @@
     "zmm16","zmm17","zmm18","zmm19","zmm20","zmm21","zmm22","zmm23","zmm24","zmm25","zmm26","zmm27","zmm28","zmm29","zmm30","zmm31");\
   a_ptr -= M * K; b_ptr += ndim * K; c_ptr += ndim * ldc - M;\
 }
+
+#define COMPUTE_trmm(ndim) {\
+  b_pref = b_ptr + ndim * K;\
+  __asm__ __volatile__(\
+    "vbroadcastsd %9,%%zmm0; movq %8,%%r11; movq %1,%%r14; movq %5,%%r13; movq %5,%%r12; movq %5,%%r9; salq $4,%%r12;"\
+    "cmpq $24,%%r11; jb "#ndim"33101f;"\
+    #ndim"33100:\n\t"\
+    "addq $24, %7;movq %7,%%r13;"\
+    COMPUTE_m24n##ndim \
+    "subq $24,%%r11;"\
+    "cmpq %%r9,%%r13; jnb "#ndim"33101f;"\
+    #ndim"331000:\n\t"\
+    "addq $192, %0; addq $1, %%r13; cmpq %%r9,%%r13; jb "#ndim"331000b;"\
+    "cmpq $24,%%r11; jnb "#ndim"33100b;"\
+    #ndim"33101:\n\t"\
+    "cmpq $16,%%r11; jb "#ndim"33102f;"\
+    "addq $16, %7;movq %7,%%r13;"\
+    COMPUTE_SIMPLE(16,ndim) \
+    "subq $16,%%r11;"\
+    "cmpq %%r9,%%r13; jnb "#ndim"33102f;"\
+    #ndim"331011:\n\t"\
+    "addq $128, %0; incq %%r13; cmpq %%r9,%%r13; jb "#ndim"331011b;"\
+    #ndim"33102:\n\t"\
+    "cmpq $8,%%r11; jb "#ndim"33103f;"\
+    "addq $8, %7;movq %7,%%r13;"\
+    COMPUTE_SIMPLE(8,ndim) \
+    "subq $8,%%r11;"\
+    "cmpq %%r9,%%r13; jnb "#ndim"33103f;"\
+    #ndim"331022:\n\t"\
+    "addq $64, %0; incq %%r13; cmpq %%r9,%%r13; jb "#ndim"331022b;"\
+    #ndim"33103:\n\t"\
+    "cmpq $4,%%r11; jb "#ndim"33104f;"\
+    "addq $4, %7;movq %7,%%r13;"\
+    COMPUTE_SIMPLE(4,ndim) \
+    "subq $4,%%r11;"\
+    "cmpq %%r9,%%r13; jnb "#ndim"33104f;"\
+    #ndim"331033:\n\t"\
+    "addq $32, %0; incq %%r13; cmpq %%r9,%%r13; jb "#ndim"331033b;"\
+    #ndim"33104:\n\t"\
+    "cmpq $2,%%r11; jb "#ndim"33105f;"\
+    "addq $2, %7;movq %7,%%r13;"\
+    COMPUTE_SIMPLE(2,ndim) \
+    "subq $2,%%r11;"\
+    "cmpq %%r9,%%r13; jnb "#ndim"33105f;"\
+    #ndim"331044:\n\t"\
+    "addq $16, %0; incq %%r13; cmpq %%r9,%%r13; jb "#ndim"331044b;"\
+    #ndim"33105:\n\t"\
+    "testq %%r11,%%r11; jz "#ndim"33106f;"\
+    "addq $1, %7;movq %7,%%r13;"\
+    COMPUTE_SIMPLE(1,ndim) \
+    "subq $1,%%r11;"\
+    "cmpq %%r9,%%r13; jnb "#ndim"33106f;"\
+    #ndim"331055:\n\t"\
+    "addq $8, %0; incq %%r13; cmpq %%r9,%%r13; jb "#ndim"331055b;"\
+    #ndim"33106:\n\t"\
+    "movq %%r14,%1; movq %%r9,%5;"\
+  :"+r"(a_ptr),"+r"(b_ptr),"+r"(c_ptr),"+r"(c_tmp),"+r"(ldc_in_bytes),"+r"(K),"+r"(b_pref),"+r"(k_dyn):"m"(M),"m"(ALPHA):"r9","r10","r11","r12","r13","r14","r15","cc","memory",\
+    "zmm0","zmm1","zmm2","zmm3","zmm4","zmm5","zmm6","zmm7","zmm8","zmm9","zmm10","zmm11","zmm12","zmm13","zmm14","zmm15",\
+    "zmm16","zmm17","zmm18","zmm19","zmm20","zmm21","zmm22","zmm23","zmm24","zmm25","zmm26","zmm27","zmm28","zmm29","zmm30","zmm31");\
+  a_ptr -= M * K; b_ptr += ndim * K; c_ptr += ndim * ldc - M;\
+}
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -304,6 +363,39 @@ CNAME(BLASLONG m, BLASLONG n, BLASLONG k, double alpha, double * __restrict__ A,
     for(;n_count>3;n_count-=4) COMPUTE(4)
     for(;n_count>1;n_count-=2) COMPUTE(2)
     if(n_count>0) COMPUTE(1)
+    return 0;
+}
+
+int __attribute__ ((noinline))
+CNAME_trmm(BLASLONG m, BLASLONG n, BLASLONG k, double alpha, double * __restrict__ A, double * __restrict__ B, double * __restrict__ C, BLASLONG ldc, BLASLONG k_init)
+{
+    if(m==0||n==0||k==0||alpha==0.0) return 0;
+    int64_t ldc_in_bytes = (int64_t)ldc * sizeof(double); double ALPHA = alpha;
+    int64_t M = (int64_t)m, K = (int64_t)k;
+    int64_t k_dyn = (int64_t)k_init, k_dyn_bak = k_dyn;
+    // if (k_dyn+m>k) printf("k_dyn = %d, m = %d, n = %d, k = %d\n");
+    BLASLONG n_count = n;
+    double *a_ptr = A,*b_ptr = B,*c_ptr = C,*c_tmp = C,*b_pref = B;
+    for(;n_count>7;n_count-=8) {
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(8)
+    }
+    for(;n_count>5;n_count-=6) {
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(6)
+    }
+    for(;n_count>3;n_count-=4) {
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(4)
+    }
+    for(;n_count>1;n_count-=2) {
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(2)
+    }
+    if(n_count>0) {
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(1)
+    }
     return 0;
 }
 
@@ -358,124 +450,7 @@ int helper(int is, int ie, int js, int je){
     return -1; 
 }
 
-// void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_second){
-//     if(dim_first==0 || dim_second==0) return;
-//     int count_first,count_second;
-//     int c24,c16,c8,c4,c2,c1;
-//     int remain = dim_first;
-//     int count_zero, count_inner;
-//     c24=remain/24;
-//     remain -= 24*c24;
-//     c16 = (remain>15)?remain/16:0;
-//     remain -= 16*c16;
-//     c8 = (remain>7)?1:0;
-//     remain -= 8*c8;
-//     c4 = (remain>3)?1:0;
-//     remain -= 4*c4;
-//     c2 = (remain>1)?1:0;
-//     remain -= 2*c2;
-//     c1 = remain;
-//     double *tosrc,*todst,*tosrc_v,*tosrc_h;
-//     double *ptr_24 = dst + 24*dim_second*c24;
-//     double *ptr_16 = ptr_24 +16*dim_second*c16;
-//     double *ptr_8 = ptr_16+8*dim_second*c8;
-//     double *ptr_4 = ptr_8+4*dim_second*c4;
-//     double *ptr_2 = ptr_4+2*dim_second*c2;
-//     for(count_second=0;count_second<dim_second;count_second++){
-//       tosrc = src + count_second * lead_dim;
-//       tosrc_h = src + count_second * lead_dim;
-//       tosrc_v = src + count_second;
-//       todst = dst + count_second * 24;
-//       count_zero=0;
-//       for(count_first=dim_first;count_first>23;count_first-=24){
-//         // __m512d ld1 = _mm512_loadu_pd(tosrc);
-//         // __m512d ld2 = _mm512_loadu_pd(tosrc+8);
-//         // __m512d ld3 = _mm512_loadu_pd(tosrc+16);
-//         // _mm512_storeu_pd(todst,ld1);
-//         // _mm512_storeu_pd(todst+8,ld2);
-//         // _mm512_storeu_pd(todst+16,ld3);
-//         for (count_inner=0;count_inner<24;count_inner++){
-//             todst[count_inner]=(count_second<count_zero)?*tosrc_h:*tosrc_v;
-//             tosrc_h++;
-//             tosrc_v+=lead_dim;
-//             count_zero++;
-//         }
-//         // tosrc+=24;
-//         todst+=24*dim_second;
-//       }
-//       // todst = dst + 24*dim_second*c24+16*count_second;
-//       todst = ptr_24 + 16*count_second;
-//       for(;count_first>15;count_first-=16){
-//         // __m512d ld1 = _mm512_loadu_pd(tosrc);
-//         // __m512d ld2 = _mm512_loadu_pd(tosrc+8);
-//         // _mm512_storeu_pd(todst,ld1);
-//         // _mm512_storeu_pd(todst+8,ld2);
-//         // tosrc+=16;
-//         for (count_inner=0;count_inner<16;count_inner++){
-//             todst[count_inner]=(count_second<count_zero)?*tosrc_h:*tosrc_v;
-//             tosrc_h++;
-//             tosrc_v+=lead_dim;
-//             count_zero++;
-//         }
-//         todst+=16*dim_second;
-//       }
-//       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*count_second;
-//       todst = ptr_16 + +8*count_second;
-//       for(;count_first>7;count_first-=8){
-//         // __m512d ld1 = _mm512_loadu_pd(tosrc);
-//         // _mm512_storeu_pd(todst,ld1);
-//         // tosrc+=8;
-//         for (count_inner=0;count_inner<8;count_inner++){
-//             todst[count_inner]=(count_second<count_zero)?*tosrc_h:*tosrc_v;
-//             tosrc_h++;
-//             tosrc_v+=lead_dim;
-//             count_zero++;
-//         }
-//         todst+=8*dim_second;
-//       }
-//       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*count_second;
-//       todst = ptr_8 + 4*count_second;
-//       for(;count_first>3;count_first-=4){
-//         // __m256d ld1 = _mm256_loadu_pd(tosrc);
-//         // _mm256_storeu_pd(todst,ld1);
-//         // tosrc+=4;
-//         for (count_inner=0;count_inner<4;count_inner++){
-//             todst[count_inner]=(count_second<count_zero)?*tosrc_h:*tosrc_v;
-//             tosrc_h++;
-//             tosrc_v+=lead_dim;
-//             count_zero++;
-//         }
-//         todst+=4*dim_second;
-//       }
-//       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*dim_second*c4+2*count_second;
-//       todst = ptr_4 + 2*count_second;
-//       for(;count_first>1;count_first-=2){
-//         // double ld1 = tosrc[0],ld2 = tosrc[1];
-//         // todst[0]=ld1;todst[1]=ld2;
-//         // tosrc+=2;
-//         for (count_inner=0;count_inner<2;count_inner++){
-//             todst[count_inner]=(count_second<count_zero)?*tosrc_h:*tosrc_v;
-//             tosrc_h++;
-//             tosrc_v+=lead_dim;
-//             count_zero++;
-//         }
-//         todst+=2*dim_second;
-//       }
-//       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*dim_second*c4+2*dim_second*c2+count_second;
-//       todst = ptr_2 + count_second;
-//       if(count_first>0) {
-//         // double ld1 = tosrc[0];
-//         // *todst=ld1;
-//         *todst=(count_second<count_zero)?*tosrc_h:*tosrc_v;
-//         tosrc_h++;
-//         tosrc_v+=lead_dim;
-//         count_zero++;
-//       }
-
-//     }
-// }
-
-void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_second, int m_start, int n_start){
+void ocopy_trmm(double *src, double *dst, int lead_dim, int dim_first, int dim_second, int m_start, int n_start){
     if(dim_first==0 || dim_second==0) return;
     int count_first,count_second;
     int c24,c16,c8,c4,c2,c1;
@@ -492,7 +467,7 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
     c2 = (remain>1)?1:0;
     remain -= 2*c2;
     c1 = remain;
-    double *tosrc,*todst,*tosrc_v,*tosrc_h;
+    double *tosrc,*todst,*tosrc_h;
     double *ptr_24 = dst + 24*dim_second*c24;
     double *ptr_16 = ptr_24 +16*dim_second*c16;
     double *ptr_8 = ptr_16+8*dim_second*c8;
@@ -502,7 +477,6 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
     for(count_second=0,count_third=n_start;count_second<dim_second;count_second++,count_third++){
       tosrc = src + count_second * lead_dim;
       tosrc_h = src + m_start + n_start*lead_dim + count_second * lead_dim;
-      tosrc_v = src + m_start*lead_dim + n_start + count_second;
       todst = dst + count_second * 24;
       count_zero=m_start;
       for(count_first=dim_first;count_first>23;count_first-=24){
@@ -512,11 +486,14 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
         // _mm512_storeu_pd(todst,ld1);
         // _mm512_storeu_pd(todst+8,ld2);
         // _mm512_storeu_pd(todst+16,ld3);
-        for (count_inner=0;count_inner<24;count_inner++){
-            todst[count_inner]=(count_third<count_zero)?*tosrc_h:*tosrc_v;
-            tosrc_h++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+23){
+          tosrc_h+=24;count_zero+=24;
+        }else{
+          for (count_inner=0;count_inner<24;count_inner++){
+              todst[count_inner]=(count_third<=count_zero)?*tosrc_h:0.;
+              tosrc_h++;
+              count_zero++;
+          }
         }
         // tosrc+=24;
         todst+=24*dim_second;
@@ -524,70 +501,69 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
       // todst = dst + 24*dim_second*c24+16*count_second;
       todst = ptr_24 + 16*count_second;
       for(;count_first>15;count_first-=16){
-        // __m512d ld1 = _mm512_loadu_pd(tosrc);
-        // __m512d ld2 = _mm512_loadu_pd(tosrc+8);
-        // _mm512_storeu_pd(todst,ld1);
-        // _mm512_storeu_pd(todst+8,ld2);
-        // tosrc+=16;
-        for (count_inner=0;count_inner<16;count_inner++){
-            todst[count_inner]=(count_third<count_zero)?*tosrc_h:*tosrc_v;
-            tosrc_h++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+15){
+          tosrc_h+=16;count_zero+=16;
+        }else{
+          for (count_inner=0;count_inner<16;count_inner++){
+              todst[count_inner]=(count_third<=count_zero)?*tosrc_h:0.;
+              tosrc_h++;
+              count_zero++;
+          }
         }
         todst+=16*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*count_second;
       todst = ptr_16 + +8*count_second;
       for(;count_first>7;count_first-=8){
-        // __m512d ld1 = _mm512_loadu_pd(tosrc);
-        // _mm512_storeu_pd(todst,ld1);
-        // tosrc+=8;
-        for (count_inner=0;count_inner<8;count_inner++){
-            todst[count_inner]=(count_third<count_zero)?*tosrc_h:*tosrc_v;
-            tosrc_h++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+7){
+          tosrc_h+=8;count_zero+=8;
+        }else{
+          for (count_inner=0;count_inner<8;count_inner++){
+              todst[count_inner]=(count_third<=count_zero)?*tosrc_h:0.;
+              tosrc_h++;
+              count_zero++;
+          }
         }
         todst+=8*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*count_second;
       todst = ptr_8 + 4*count_second;
       for(;count_first>3;count_first-=4){
-        // __m256d ld1 = _mm256_loadu_pd(tosrc);
-        // _mm256_storeu_pd(todst,ld1);
-        // tosrc+=4;
-        for (count_inner=0;count_inner<4;count_inner++){
-            todst[count_inner]=(count_third<count_zero)?*tosrc_h:*tosrc_v;
-            tosrc_h++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+3){
+          tosrc_h+=4;count_zero+=4;
+        }else{
+          for (count_inner=0;count_inner<4;count_inner++){
+              todst[count_inner]=(count_third<=count_zero)?*tosrc_h:0.;
+              tosrc_h++;
+              count_zero++;
+          }
         }
         todst+=4*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*dim_second*c4+2*count_second;
       todst = ptr_4 + 2*count_second;
       for(;count_first>1;count_first-=2){
-        // double ld1 = tosrc[0],ld2 = tosrc[1];
-        // todst[0]=ld1;todst[1]=ld2;
-        // tosrc+=2;
-        for (count_inner=0;count_inner<2;count_inner++){
-            todst[count_inner]=(count_third<count_zero)?*tosrc_h:*tosrc_v;
-            tosrc_h++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+1){
+          tosrc_h+=2;count_zero+=2;
+        }else{
+          for (count_inner=0;count_inner<2;count_inner++){
+              todst[count_inner]=(count_third<=count_zero)?*tosrc_h:0.;
+              tosrc_h++;
+              count_zero++;
+          }
         }
         todst+=2*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*dim_second*c4+2*dim_second*c2+count_second;
       todst = ptr_2 + count_second;
       if(count_first>0) {
-        // double ld1 = tosrc[0];
-        // *todst=ld1;
-        *todst=(count_third<count_zero)?*tosrc_h:*tosrc_v;
-        tosrc_h++;
-        tosrc_v+=lead_dim;
-        count_zero++;
+        if (count_third>count_zero){
+          tosrc_h++;count_zero++;
+        }else{
+          *todst=(count_third<=count_zero)?*tosrc_h:0.;
+          tosrc_h++;
+          count_zero++;
+        }
       }
 
     }
@@ -773,6 +749,7 @@ static void SCALE_MULT(double *dat,double scale, BLASLONG lead_dim, BLASLONG dim
 }
 
 #define GEMM_KERNEL(m_from,m_dim,n_from,n_dim,k_dim,ALPHA,sa,sb,C,LDC) CNAME(m_dim,n_dim,k_dim,ALPHA,sa,sb,(C)+(int64_t)(LDC)*(int64_t)(n_from)+(m_from),LDC)
+#define TRMM_KERNEL(m_from,m_dim,n_from,n_dim,k_dim,ALPHA,sa,sb,C,LDC,k_init) CNAME_trmm(m_dim,n_dim,k_dim,ALPHA,sa,sb,(C)+(int64_t)(LDC)*(int64_t)(n_from)+(m_from),LDC,k_init)
 #define GEMM_BETA(C,LDC,BETA,M,N) SCALE_MULT(C,BETA,LDC,M,N)
 void GEMM_ICOPY(int m_from,int m_dim,int k_from,int k_dim,double *A,int lda,char transa,double *sa){
   if(transa=='N' || transa=='n') dgemm_tcopy_16(A+(int64_t)lda*(int64_t)k_from+m_from,sa,lda,m_dim,k_dim);
@@ -782,7 +759,7 @@ void GEMM_OCOPY(int k_from,int k_dim,int n_from,int n_dim,double *B,int ldb,doub
   dgemm_ncopy_2(B+(int64_t)ldb*(int64_t)n_from+k_from,sb,ldb,k_dim,n_dim);
 }
 //#define GEMM_R_M 1152
-#define GEMM_R_M 11520
+#define GEMM_R_M 1152
 #define GEMM_R_N 9216
 #define GEMM_D_M 192 // should be a multiple of 16
 #define GEMM_D_N 96 // should be a multiple of 12
@@ -820,13 +797,9 @@ int get_gemm_task(uint64_t *task_end, int *m_start, int *n_start, int *m_end, in
     *m_start = mstart; *n_start = nstart; *m_end = mend; *n_end = nend;
   return 1;
 }
-void ftblas_dsymm_ori(int m,int n,int k,double alpha,double *A,int lda,double *B,int ldb,double beta,double *C,int ldc){
+void ftblas_dtrmm_ori(int m,int n,int k,double alpha,double *A,int lda,double *B,int ldb,double beta,double *C,int ldc){
   const int M = m, N = n, K = k, LDA = lda, LDB = ldb, LDC = ldc;
   const double ALPHA = alpha, BETA = beta;
-#ifdef TIMING
-  double t_tot=0.,t_copy_a=0.,t_copy_b=0.,t_copy_c=0.,t_A_encoding=0.,t_my=0.;
-  double t0, t1;
-#endif
   if(M<1||N<1) return;
 
   double *sa = (double *)aligned_alloc(4096,GEMM_D_K*GEMM_R_M*sizeof(double));
@@ -852,7 +825,7 @@ void ftblas_dsymm_ori(int m,int n,int k,double alpha,double *A,int lda,double *B
 #endif
         }
         //printf("entering the m loop.\n");
-        for(m_count=0; m_count<M; m_count+=m_inc){
+        for(m_count=k_count; m_count<M; m_count+=m_inc){
           //printf("in the m loop, m=%d,n=%d,k=%d.\n",m_count,n_count,k_count);
           m_inc = M-m_count; if(m_inc>GEMM_R_M) m_inc = GEMM_R_M;
 	  adimleft = m_inc;
@@ -860,9 +833,7 @@ void ftblas_dsymm_ori(int m,int n,int k,double alpha,double *A,int lda,double *B
 #ifdef TIMING
             t0=get_sec();
 #endif
-
-            ocopy_symm(A,sa+copystart*k_inc,LDA,copyend-copystart,k_inc,m_count+copystart,k_count);
-
+            ocopy_trmm(A,sa+copystart*k_inc,LDA,copyend-copystart,k_inc,m_count+copystart,k_count);
 #ifdef TIMING
             t1=get_sec();
             t_copy_a+=(t1-t0);
@@ -870,11 +841,12 @@ void ftblas_dsymm_ori(int m,int n,int k,double alpha,double *A,int lda,double *B
           }
           task_end = (uint64_t)m_count | ((uint64_t)n_count<<32);
 	  while(get_gemm_task(&task_end,&m_start,&n_start,&m_end,&n_end,m_count,n_count,m_count+m_inc,n_count+n_inc)){
+      // printf("m_start=%d, m_dim=%d, n_start=%d, n_dim=%d,k_start=%d,k_dim=%d\n",m_start,m_end-m_start, n_start, n_end-n_start,k_count,k_inc);
             if(k_count == 0 && BETA != 1.0) {
 #ifdef TIMING
               t0=get_sec();
 #endif
-              GEMM_BETA(C+n_start*LDC+m_start,LDC,BETA,m_end-m_start,n_end-n_start);
+              //GEMM_BETA(C+n_start*LDC+m_start,LDC,BETA,m_end-m_start,n_end-n_start);
 #ifdef TIMING
               t1=get_sec();
               t_copy_c+=(t1-t0);
@@ -883,7 +855,14 @@ void ftblas_dsymm_ori(int m,int n,int k,double alpha,double *A,int lda,double *B
 #ifdef TIMING
             t0=get_sec();
 #endif
-            if(ALPHA != 0.0) GEMM_KERNEL(m_start,m_end-m_start,n_start,n_end-n_start,k_inc,ALPHA,sa+(m_start-m_count)*k_inc,sb+(n_start-n_count)*k_inc,C,LDC);
+            int tmp=helper(m_start,m_end,k_count,k_count+k_inc);
+            // printf("helper: %d.\n", tmp);
+            // tot++;
+            // if (tmp==0) zero++;
+            // else if (tmp==3) three++;
+            // else if (tmp==4) four++;
+            if(ALPHA != 0.0&&tmp==0) GEMM_KERNEL(m_start,m_end-m_start,n_start,n_end-n_start,k_inc,ALPHA,sa+(m_start-m_count)*k_inc,sb+(n_start-n_count)*k_inc,C,LDC);
+            else if (ALPHA != 0.0) TRMM_KERNEL(m_start,m_end-m_start,n_start,n_end-n_start,k_inc,ALPHA,sa+(m_start-m_count)*k_inc,sb+(n_start-n_count)*k_inc,C,LDC,m_start-k_count);
 #ifdef TIMING
             t1=get_sec();
             t_tot+=(t1-t0);
@@ -900,4 +879,5 @@ void ftblas_dsymm_ori(int m,int n,int k,double alpha,double *A,int lda,double *B
   printf("Time in copy C: %f, perf = %f GFLOPS\n", t_copy_c, 2.*1e-9*M*N/t_copy_c);
   printf("Total: %f\n", t_tot+t_copy_b+t_copy_c+t_copy_a);
 #endif
+  //printf("tot:%d,zero: %d,three:%d,four:%d,sum:%d,ratio:%f\n",tot,zero,three,four,zero+three+four,(double)(three+four)/(2.*tot));
 }

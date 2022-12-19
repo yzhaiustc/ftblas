@@ -1,5 +1,4 @@
 #include <immintrin.h>
-
 #include "../include/ftblas.h"
 
 #define A(i,j) A[(i)+(j)*lda]
@@ -360,10 +359,24 @@
   "7"#mdim"7"#ndim"9:\n\t"\
   SAVE_m##mdim##n##ndim\
   SAVE_CHKSUM_m##mdim##n##ndim
+
+#define COMPUTE_trmm_SIMPLE(mdim,ndim)\
+  INIT_m##mdim##n##ndim "testq %%r13,%%r13; jz 7"#mdim"7"#ndim"999f;"\
+  "movq %%r13,%5; movq %%r14,%1; leaq (%%r14,%%r12,2),%%r15; addq %%r12,%%r15;"\
+  "7"#mdim"7"#ndim"199:\n\t"\
+  KERNEL_k1m##mdim##n##ndim "decq %5; jnz 7"#mdim"7"#ndim"199b;"\
+  "7"#mdim"7"#ndim"999:\n\t"\
+  SAVE_m##mdim##n##ndim\
+  SAVE_CHKSUM_m##mdim##n##ndim
+
 #define COMPUTE_m24n1 COMPUTE_SIMPLE(24,1)
 #define COMPUTE_m24n2 COMPUTE_SIMPLE(24,2)
 #define COMPUTE_m24n4 COMPUTE_SIMPLE(24,4)
 #define COMPUTE_m24n6 COMPUTE_SIMPLE(24,6)
+#define COMPUTE_trmm_m24n1 COMPUTE_trmm_SIMPLE(24,1)
+#define COMPUTE_trmm_m24n2 COMPUTE_trmm_SIMPLE(24,2)
+#define COMPUTE_trmm_m24n4 COMPUTE_trmm_SIMPLE(24,4)
+#define COMPUTE_trmm_m24n6 COMPUTE_trmm_SIMPLE(24,6)
 //#define COMPUTE_m24n8 COMPUTE_SIMPLE(24,8)
 #define COMPUTE_m16n1 COMPUTE_SIMPLE(16,1)
 #define COMPUTE_m16n2 COMPUTE_SIMPLE(16,2)
@@ -375,6 +388,18 @@
 #define COMPUTE_m8n4 COMPUTE_SIMPLE(8,4)
 #define COMPUTE_m8n6 COMPUTE_SIMPLE(8,6)
 #define COMPUTE_m8n8 COMPUTE_SIMPLE(8,8)
+
+//#define COMPUTE_m24n8 COMPUTE_SIMPLE(24,8)
+#define COMPUTE_trmm_m16n1 COMPUTE_trmm_SIMPLE(16,1)
+#define COMPUTE_trmm_m16n2 COMPUTE_trmm_SIMPLE(16,2)
+#define COMPUTE_trmm_m16n4 COMPUTE_trmm_SIMPLE(16,4)
+#define COMPUTE_trmm_m16n6 COMPUTE_trmm_SIMPLE(16,6)
+#define COMPUTE_trmm_m16n8 COMPUTE_trmm_SIMPLE(16,8)
+#define COMPUTE_trmm_m8n1 COMPUTE_trmm_SIMPLE(8,1)
+#define COMPUTE_trmm_m8n2 COMPUTE_trmm_SIMPLE(8,2)
+#define COMPUTE_trmm_m8n4 COMPUTE_trmm_SIMPLE(8,4)
+#define COMPUTE_trmm_m8n6 COMPUTE_trmm_SIMPLE(8,6)
+#define COMPUTE_trmm_m8n8 COMPUTE_trmm_SIMPLE(8,8)
 
 #define COMPUTE_m24n8 \
   INIT_m24n8 "movq %%r13,%5; movq %%r14,%1; leaq (%%r14,%%r12,2),%%r15; addq %%r12,%%r15; movq %2,%3;"\
@@ -393,10 +418,27 @@
   "724789:\n\t"\
   "prefetcht0 (%%r14); prefetcht0 (%7); prefetcht0 64(%7); prefetcht0 128(%7);" SAVE_m24n8 SAVE_CHKSUM_m24n8
 
+#define COMPUTE_trmm_m24n8 \
+  INIT_m24n8 "movq %%r13,%5; movq %%r14,%1; leaq (%%r14,%%r12,2),%%r15; addq %%r12,%%r15; movq %2,%3;"\
+  "cmpq $16,%5; jb 72478399f; movq $16,%5;"\
+  "72478199:\n\t"\
+  KERNEL_k1m24n8 "addq $4,%5; testq $12,%5; movq $172,%%r10; cmovz %4,%%r10;"\
+  KERNEL_k1m24n8 "prefetcht1 (%3); subq $129,%3; addq %%r10,%3;"\
+  KERNEL_k1m24n8 "cmpq $208,%5; cmoveq %2,%3;"\
+  KERNEL_k1m24n8 "cmpq %5,%%r13; jnb 72478199b;"\
+  "movq %2,%3; negq %5; leaq 16(%%r13,%5,1),%5;"\
+  "72478399:\n\t"\
+  "testq %5,%5; jz 72478999f;"\
+  "72478599:\n\t"\
+  "prefetcht0 (%3); prefetcht0 64(%3); prefetcht0 128(%3);"\
+  KERNEL_k1m24n8 "addq %4,%3; decq %5;jnz 72478599b;"\
+  "72478999:\n\t"\
+  "prefetcht0 (%%r14); prefetcht0 (%7); prefetcht0 64(%7); prefetcht0 128(%7);" SAVE_m24n8 SAVE_CHKSUM_m24n8
+
 #define COMPUTE(ndim) {\
   b_pref = b_ptr + ndim * K;\
   __asm__ __volatile__(\
-    "vbroadcastsd %10,%%zmm0; movq %9,%%r11; movq %1,%%r14; movq %5,%%r13; movq %5,%%r12; salq $4,%%r12;"\
+    "movq %9,%%r11; movq %1,%%r14; movq %5,%%r13; movq %5,%%r12; salq $4,%%r12;"\
     "cmpq $24,%%r11; jb "#ndim"33101f;"\
     #ndim"33100:\n\t"\
     COMPUTE_m24n##ndim "subq $24,%%r11; cmpq $24,%%r11; jnb "#ndim"33100b;"\
@@ -417,7 +459,68 @@
     COMPUTE_SIMPLE(1,ndim) "subq $1,%%r11;"\
     #ndim"33106:\n\t"\
     "movq %%r14,%1; movq %%r13,%5;"\
-  :"+r"(a_ptr),"+r"(b_ptr),"+r"(c_ptr),"+r"(c_tmp),"+r"(ldc_in_bytes),"+r"(K),"+r"(b_pref),"+r"(chk_c_ptr_pos),"+r"(chk_c_row_ptr_pos):"m"(M),"m"(ALPHA):"r10","r11","r12","r13","r14","r15","cc","memory",\
+  :"+r"(a_ptr),"+r"(b_ptr),"+r"(c_ptr),"+r"(c_tmp),"+r"(ldc_in_bytes),"+r"(K),"+r"(b_pref),"+r"(chk_c_ptr_pos),"+r"(chk_c_row_ptr_pos):"m"(M):"r10","r11","r12","r13","r14","r15","cc","memory",\
+    "zmm0","zmm1","zmm2","zmm3","zmm4","zmm5","zmm6","zmm7","zmm8","zmm9","zmm10","zmm11","zmm12","zmm13","zmm14","zmm15",\
+    "zmm16","zmm17","zmm18","zmm19","zmm20","zmm21","zmm22","zmm23","zmm24","zmm25","zmm26","zmm27","zmm28","zmm29","zmm30","zmm31");\
+  a_ptr -= M * K; b_ptr += ndim * K; c_ptr += ndim * ldc - M;\
+}
+
+
+#define COMPUTE_trmm(ndim) {\
+  __asm__ __volatile__(\
+    "movq %9,%%r11; movq %1,%%r14; movq %5,%%r13; movq %5,%%r12; salq $4,%%r12;"\
+    "cmpq $24,%%r11; jb "#ndim"3310199f;"\
+    #ndim"3310099:\n\t"\
+    "addq $24, %6;movq %6,%%r13;"\
+    COMPUTE_trmm_m24n##ndim \
+    "subq $24,%%r11;"\
+    "cmpq %10,%%r13; jnb "#ndim"3310199f;"\
+    #ndim"33100099:\n\t"\
+    "addq $192, %0; addq $1, %%r13; cmpq %10,%%r13; jb "#ndim"33100099b;"\
+    "cmpq $24,%%r11; jnb "#ndim"3310099b;"\
+    #ndim"3310199:\n\t"\
+    "cmpq $16,%%r11; jb "#ndim"3310299f;"\
+    "addq $16, %6;movq %6,%%r13;"\
+    COMPUTE_SIMPLE(16,ndim) \
+    "subq $16,%%r11;"\
+    "cmpq %10,%%r13; jnb "#ndim"3310299f;"\
+    #ndim"33101199:\n\t"\
+    "addq $128, %0; incq %%r13; cmpq %10,%%r13; jb "#ndim"33101199b;"\
+    #ndim"3310299:\n\t"\
+    "cmpq $8,%%r11; jb "#ndim"3310399f;"\
+    "addq $8, %6;movq %6,%%r13;"\
+    COMPUTE_SIMPLE(8,ndim) \
+    "subq $8,%%r11;"\
+    "cmpq %10,%%r13; jnb "#ndim"3310399f;"\
+    #ndim"33102299:\n\t"\
+    "addq $64, %0; incq %%r13; cmpq %10,%%r13; jb "#ndim"33102299b;"\
+    #ndim"3310399:\n\t"\
+    "cmpq $4,%%r11; jb "#ndim"3310499f;"\
+    "addq $4, %6;movq %6,%%r13;"\
+    COMPUTE_SIMPLE(4,ndim) \
+    "subq $4,%%r11;"\
+    "cmpq %10,%%r13; jnb "#ndim"3310499f;"\
+    #ndim"33103399:\n\t"\
+    "addq $32, %0; incq %%r13; cmpq %10,%%r13; jb "#ndim"33103399b;"\
+    #ndim"3310499:\n\t"\
+    "cmpq $2,%%r11; jb "#ndim"3310599f;"\
+    "addq $2, %6;movq %6,%%r13;"\
+    COMPUTE_SIMPLE(2,ndim) \
+    "subq $2,%%r11;"\
+    "cmpq %10,%%r13; jnb "#ndim"3310599f;"\
+    #ndim"33104499:\n\t"\
+    "addq $16, %0; incq %%r13; cmpq %10,%%r13; jb "#ndim"33104499b;"\
+    #ndim"3310599:\n\t"\
+    "testq %%r11,%%r11; jz "#ndim"3310699f;"\
+    "addq $1, %6;movq %6,%%r13;"\
+    COMPUTE_SIMPLE(1,ndim) \
+    "subq $1,%%r11;"\
+    "cmpq %10,%%r13; jnb "#ndim"3310699f;"\
+    #ndim"33105599:\n\t"\
+    "addq $8, %0; incq %%r13; cmpq %10,%%r13; jb "#ndim"33105599b;"\
+    #ndim"3310699:\n\t"\
+    "movq %%r14,%1; movq %10,%5;"\
+  :"+r"(a_ptr),"+r"(b_ptr),"+r"(c_ptr),"+r"(c_tmp),"+r"(ldc_in_bytes),"+r"(K),"+r"(k_dyn),"+r"(chk_c_ptr_pos),"+r"(chk_c_row_ptr_pos):"m"(M),"m"(K_ref):"r10","r11","r12","r13","r14","r15","cc","memory",\
     "zmm0","zmm1","zmm2","zmm3","zmm4","zmm5","zmm6","zmm7","zmm8","zmm9","zmm10","zmm11","zmm12","zmm13","zmm14","zmm15",\
     "zmm16","zmm17","zmm18","zmm19","zmm20","zmm21","zmm22","zmm23","zmm24","zmm25","zmm26","zmm27","zmm28","zmm29","zmm30","zmm31");\
   a_ptr -= M * K; b_ptr += ndim * K; c_ptr += ndim * ldc - M;\
@@ -460,6 +563,49 @@ CNAME(BLASLONG m, BLASLONG n, BLASLONG k, double alpha, double * __restrict__ A,
     }
     return 0;
 }
+
+int __attribute__ ((noinline))
+CNAME_trmm(BLASLONG m, BLASLONG n, BLASLONG k, double alpha, double * __restrict__ A, double * __restrict__ B, double * __restrict__ C, BLASLONG ldc, BLASLONG k_init, double * __restrict__ chk_c_col_ptr,double * __restrict__  chk_c_row_ptr)
+{
+    if(m==0||n==0||k==0||alpha==0.0) return 0;
+    int64_t ldc_in_bytes = (int64_t)ldc * sizeof(double); double ALPHA = alpha;
+    int64_t M = (int64_t)m, K = (int64_t)k, K_ref=K;
+    int64_t k_dyn = (int64_t)k_init, k_dyn_bak = k_dyn;
+    if (k_dyn+m>k) printf("k_dyn = %d, m = %d, n = %d, k = %d\n");
+    BLASLONG n_count = n;
+    double *a_ptr = A,*b_ptr = B,*c_ptr = C,*c_tmp = C,*b_pref = B, *chk_c_ptr_pos = chk_c_col_ptr, *chk_c_row_ptr_pos = chk_c_row_ptr;
+    for(;n_count>7;n_count-=8) {
+      k_dyn = k_dyn_bak;
+      chk_c_ptr_pos = chk_c_col_ptr;
+      COMPUTE_trmm(8)
+      chk_c_row_ptr_pos+=8;
+    }
+    for(;n_count>5;n_count-=6) {
+      chk_c_ptr_pos = chk_c_col_ptr;
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(6)
+      chk_c_row_ptr_pos+=6;
+    }
+    for(;n_count>3;n_count-=4) {
+      chk_c_ptr_pos = chk_c_col_ptr;
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(4)
+      chk_c_row_ptr_pos+=4;
+    }
+    for(;n_count>1;n_count-=2) {
+      chk_c_ptr_pos = chk_c_col_ptr;
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(2)
+      chk_c_row_ptr_pos+=2;
+    }
+    if(n_count>0) {
+      chk_c_ptr_pos = chk_c_col_ptr;
+      k_dyn = k_dyn_bak;
+      COMPUTE_trmm(1)
+    }
+    return 0;
+}
+
 
 static void dgemm_tcopy_2(double *src, double *dst, BLASLONG lead_dim, BLASLONG dim_first, BLASLONG dim_second){
 //src_leading_dim parallel with dst_tile_leading_dim
@@ -515,7 +661,18 @@ static void dgemm_ncopy_2(double *src, double *dst, BLASLONG lead_dim, BLASLONG 
     }
 }
 
-void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_second, int m_start, int n_start,double *chk_b, double *chk_c){
+int helper(int is, int ie, int js, int je){
+  //printf("%d, %d, %d, %d\n", is, ie, js, je);
+    if (je <= is) return 0;//case 1, all elements reside at lower triangular
+    else if (js > ie) return 1;//case 2, all elements reside at upper triangular
+    else if (js > is && je > ie) return 2;//case 3
+    else if (js <= is && je <= ie) return 3;// case 4
+    else if (js <= is && je > ie) return 4;
+    else if (js > is && je <= ie) return 5;
+    return -1; 
+}
+
+void ocopy_trmm(double *src, double *dst, int lead_dim, int dim_first, int dim_second, int m_start, int n_start,double *chk_b, double *chk_c){
     if(dim_first==0 || dim_second==0) return;
     int count_first,count_second;
     int c24,c16,c8,c4,c2,c1;
@@ -532,7 +689,7 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
     c2 = (remain>1)?1:0;
     remain -= 2*c2;
     c1 = remain;
-    double *todst,*tosrc_v,*tosrc_h;
+    double *tosrc,*todst,*tosrc_h;
     double *ptr_24 = dst + 24*dim_second*c24;
     double *ptr_16 = ptr_24 +16*dim_second*c16;
     double *ptr_8 = ptr_16+8*dim_second*c8;
@@ -541,8 +698,8 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
     double *ptr_chk_c, ld_a;
     int count_third;
     for(count_second=0,count_third=n_start;count_second<dim_second;count_second++,count_third++){
+      tosrc = src + count_second * lead_dim;
       tosrc_h = src + m_start + n_start*lead_dim + count_second * lead_dim;
-      tosrc_v = src + m_start*lead_dim + n_start + count_second;
       todst = dst + count_second * 24;
       count_zero=m_start;
       ptr_chk_c = chk_c;
@@ -554,14 +711,17 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
         // _mm512_storeu_pd(todst,ld1);
         // _mm512_storeu_pd(todst+8,ld2);
         // _mm512_storeu_pd(todst+16,ld3);
-        for (count_inner=0;count_inner<24;count_inner++){
-            ld_a = (count_third<count_zero)?*tosrc_h:*tosrc_v;
-            todst[count_inner]= ld_a;
-            *ptr_chk_c += ld_a * ld_chk_b;
-            tosrc_h++;
-            ptr_chk_c++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+23){
+          tosrc_h+=24;count_zero+=24;ptr_chk_c+=24;
+        }else{
+          for (count_inner=0;count_inner<24;count_inner++){
+              ld_a=(count_third<=count_zero)?*tosrc_h:0.;
+              todst[count_inner]=ld_a;
+              *ptr_chk_c += ld_a * ld_chk_b;
+              tosrc_h++;
+              ptr_chk_c++;
+              count_zero++;
+          }
         }
         // tosrc+=24;
         todst+=24*dim_second;
@@ -569,85 +729,83 @@ void ocopy_symm(double *src, double *dst, int lead_dim, int dim_first, int dim_s
       // todst = dst + 24*dim_second*c24+16*count_second;
       todst = ptr_24 + 16*count_second;
       for(;count_first>15;count_first-=16){
-        // __m512d ld1 = _mm512_loadu_pd(tosrc);
-        // __m512d ld2 = _mm512_loadu_pd(tosrc+8);
-        // _mm512_storeu_pd(todst,ld1);
-        // _mm512_storeu_pd(todst+8,ld2);
-        // tosrc+=16;
-        for (count_inner=0;count_inner<16;count_inner++){
-            ld_a = (count_third<count_zero)?*tosrc_h:*tosrc_v;
-            todst[count_inner]= ld_a;
-            *ptr_chk_c += ld_a * ld_chk_b;
-            tosrc_h++;
-            ptr_chk_c++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+15){
+          tosrc_h+=16;count_zero+=16;ptr_chk_c+=16;
+        }else{
+          for (count_inner=0;count_inner<16;count_inner++){
+              ld_a=(count_third<=count_zero)?*tosrc_h:0.;
+              todst[count_inner]=ld_a;
+              *ptr_chk_c += ld_a * ld_chk_b;
+              tosrc_h++;
+              ptr_chk_c++;
+              count_zero++;
+          }
         }
         todst+=16*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*count_second;
       todst = ptr_16 + +8*count_second;
       for(;count_first>7;count_first-=8){
-        // __m512d ld1 = _mm512_loadu_pd(tosrc);
-        // _mm512_storeu_pd(todst,ld1);
-        // tosrc+=8;
-        for (count_inner=0;count_inner<8;count_inner++){
-            ld_a = (count_third<count_zero)?*tosrc_h:*tosrc_v;
-            todst[count_inner]= ld_a;
-            *ptr_chk_c += ld_a * ld_chk_b;
-            tosrc_h++;
-            ptr_chk_c++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+7){
+          tosrc_h+=8;count_zero+=8;ptr_chk_c+=8;
+        }else{
+          for (count_inner=0;count_inner<8;count_inner++){
+              ld_a=(count_third<=count_zero)?*tosrc_h:0.;
+              todst[count_inner]=ld_a;
+              *ptr_chk_c += ld_a * ld_chk_b;
+              tosrc_h++;
+              ptr_chk_c++;
+              count_zero++;
+          }
         }
         todst+=8*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*count_second;
       todst = ptr_8 + 4*count_second;
       for(;count_first>3;count_first-=4){
-        // __m256d ld1 = _mm256_loadu_pd(tosrc);
-        // _mm256_storeu_pd(todst,ld1);
-        // tosrc+=4;
-        for (count_inner=0;count_inner<4;count_inner++){
-            ld_a = (count_third<count_zero)?*tosrc_h:*tosrc_v;
-            todst[count_inner]= ld_a;
-            *ptr_chk_c += ld_a * ld_chk_b;
-            tosrc_h++;
-            ptr_chk_c++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+3){
+          tosrc_h+=4;count_zero+=4;ptr_chk_c+=4;
+        }else{
+          for (count_inner=0;count_inner<4;count_inner++){
+              ld_a=(count_third<=count_zero)?*tosrc_h:0.;
+              todst[count_inner]=ld_a;
+              *ptr_chk_c += ld_a * ld_chk_b;
+              tosrc_h++;
+              ptr_chk_c++;
+              count_zero++;
+          }
         }
         todst+=4*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*dim_second*c4+2*count_second;
       todst = ptr_4 + 2*count_second;
       for(;count_first>1;count_first-=2){
-        // double ld1 = tosrc[0],ld2 = tosrc[1];
-        // todst[0]=ld1;todst[1]=ld2;
-        // tosrc+=2;
-        for (count_inner=0;count_inner<2;count_inner++){
-            ld_a = (count_third<count_zero)?*tosrc_h:*tosrc_v;
-            todst[count_inner]= ld_a;
-            *ptr_chk_c += ld_a * ld_chk_b;
-            tosrc_h++;
-            ptr_chk_c++;
-            tosrc_v+=lead_dim;
-            count_zero++;
+        if (count_third>count_zero+1){
+          tosrc_h+=2;count_zero+=2;ptr_chk_c+=2;
+        }else{
+          for (count_inner=0;count_inner<2;count_inner++){
+              ld_a=(count_third<=count_zero)?*tosrc_h:0.;
+              todst[count_inner]=ld_a;
+              *ptr_chk_c += ld_a * ld_chk_b;
+              tosrc_h++;
+              ptr_chk_c++;
+              count_zero++;
+          }
         }
         todst+=2*dim_second;
       }
       // todst = dst + 24*dim_second*c24+16*dim_second*c16+8*dim_second*c8+4*dim_second*c4+2*dim_second*c2+count_second;
       todst = ptr_2 + count_second;
       if(count_first>0) {
-        // double ld1 = tosrc[0];
-        // *todst=ld1;
-        ld_a = (count_third<count_zero)?*tosrc_h:*tosrc_v;
-        *todst= ld_a;
-        *ptr_chk_c += ld_a * ld_chk_b;
-        tosrc_h++;
-        ptr_chk_c++;
-        tosrc_v+=lead_dim;
-        count_zero++;
+        if (count_third>count_zero){
+          tosrc_h++;count_zero++;ptr_chk_c++;
+        }else{
+          ld_a =(count_third<=count_zero)?*tosrc_h:0.;
+          *todst= ld_a;
+          tosrc_h++;
+          ptr_chk_c++;
+          count_zero++;
+        }
       }
 
     }
@@ -821,7 +979,7 @@ static void dgemm_ncopy_16(double *src, double *dst, BLASLONG lead_dim, BLASLONG
 }
 
 
-void symm_checksum_encoding_A_col_major(double *A, int m, int lda, double *chksm_A_col){
+void trmm_checksum_encoding_A_col_major(double *A, int m, int lda, double *chksm_A_col){
   int i,j,inner_count;
   int m4=m&-4;
   double *ptr_a1, *ptr_a2,*ptr_a3,*ptr_a4;
@@ -830,20 +988,18 @@ void symm_checksum_encoding_A_col_major(double *A, int m, int lda, double *chksm
       i = j;
       int i_left = m4 - j - 4;
       int i_left_8 = i_left & -8;
-      // printf("j = %d, remain = %d, i_left_8 = %d\n", j, i_left - i_left_8, i_left_8);
       double ai1j = A(i+1,j), ai2j = A(i+2,j), ai3j = A(i+3,j), ai2j1 = A(i+2,j+1), ai3j1 = A(i+3,j+1), ai3j2 = A(i+3,j+2);
       double tmp1=0.,tmp2=0.,tmp3=0.,tmp4=0.;
       tmp1 += (A(i,j)+ai1j+ai2j+ai3j);
-      tmp2 += (ai1j+A(i+1,j+1)+ai2j1+ai3j1);
-      tmp3 += (ai2j+ai2j1+A(i+2,j+2)+ai3j2);
-      tmp4 += (ai3j+ai3j1+ai3j2+A(i+3,j+3));
+      tmp2 += (A(i+1,j+1)+ai2j1+ai3j1);
+      tmp3 += (A(i+2,j+2)+ai3j2);
+      tmp4 += (A(i+3,j+3));
       i+=4;
       if (i_left - i_left_8 > 0){
         __m256d v1 = _mm256_loadu_pd(&A(i,j));
         __m256d v2 = _mm256_loadu_pd(&A(i,j+1));
         __m256d v3 = _mm256_loadu_pd(&A(i,j+2));
         __m256d v4 = _mm256_loadu_pd(&A(i,j+3));
-        _mm256_storeu_pd(chksm_A_col+i, v1+v2+v3+v4+_mm256_loadu_pd(chksm_A_col+i));
         __m128d halfv1 = _mm_add_pd(_mm256_extractf128_pd(v1, 0), _mm256_extractf128_pd(v1, 1));
         __m128d halfv2 = _mm_add_pd(_mm256_extractf128_pd(v2, 0), _mm256_extractf128_pd(v2, 1));
         __m128d halfv3 = _mm_add_pd(_mm256_extractf128_pd(v3, 0), _mm256_extractf128_pd(v3, 1));
@@ -852,7 +1008,6 @@ void symm_checksum_encoding_A_col_major(double *A, int m, int lda, double *chksm
         halfv2 = _mm_hadd_pd(halfv2, halfv2);
         halfv3 = _mm_hadd_pd(halfv3, halfv3);
         halfv4 = _mm_hadd_pd(halfv4, halfv4);
-        // printf("%f,%f,%f,%f\n",halfv1[0],halfv2[0],halfv3[0],halfv4[0]);
         tmp1+=halfv1[0];
         tmp2+=halfv2[0];
         tmp3+=halfv3[0];
@@ -869,7 +1024,6 @@ void symm_checksum_encoding_A_col_major(double *A, int m, int lda, double *chksm
           __m512d lv2 = _mm512_loadu_pd(&A(i,j+1));
           __m512d lv3 = _mm512_loadu_pd(&A(i,j+2));
           __m512d lv4 = _mm512_loadu_pd(&A(i,j+3));
-          _mm512_storeu_pd(chksm_A_col+i, lv1+lv2+lv3+lv4+_mm512_loadu_pd(chksm_A_col+i));
           hv1 = _mm512_add_pd(hv1,lv1);
           hv2 = _mm512_add_pd(hv2,lv2);
           hv3 = _mm512_add_pd(hv3,lv3);
@@ -890,18 +1044,14 @@ void symm_checksum_encoding_A_col_major(double *A, int m, int lda, double *chksm
   for (j=0;j<m4;j++){
     double tmp = 0.;
     for (i=m4;i<m;i++){
-      double aij = A(i,j);
-      tmp += aij;
-      chksm_A_col[i] += aij;
+      tmp += A(i,j);
     }
     chksm_A_col[j] += tmp;
   }
   for (j=m4;j<m;j++){
     double tmp = A(j,j);
     for (i=j+1;i<m;i++){
-      double aij = A(i,j);
-      tmp += aij;
-      chksm_A_col[i] += aij;
+      tmp += A(i,j);
     }
     chksm_A_col[j] += tmp;
   }
@@ -921,6 +1071,7 @@ static void SCALE_MULT(double *dat,double scale, BLASLONG lead_dim, BLASLONG dim
 }
 
 #define GEMM_KERNEL(m_from,m_dim,n_from,n_dim,k_dim,ALPHA,sa,sb,C,LDC,chk_c_col_ptr,chk_c_row_ptr) CNAME(m_dim,n_dim,k_dim,ALPHA,sa,sb,(C)+(int64_t)(LDC)*(int64_t)(n_from)+(m_from),LDC,chk_c_col_ptr,chk_c_row_ptr)
+#define TRMM_KERNEL(m_from,m_dim,n_from,n_dim,k_dim,ALPHA,sa,sb,C,LDC,k_init,chk_c_col_ptr,chk_c_row_ptr) CNAME_trmm(m_dim,n_dim,k_dim,ALPHA,sa,sb,(C)+(int64_t)(LDC)*(int64_t)(n_from)+(m_from),LDC,k_init,chk_c_col_ptr,chk_c_row_ptr)
 #define GEMM_BETA(C,LDC,BETA,M,N) SCALE_MULT(C,BETA,LDC,M,N)
 void GEMM_ICOPY(int m_from,int m_dim,int k_from,int k_dim,double *A,int lda,char transa,double *sa){
   if(transa=='N' || transa=='n') dgemm_tcopy_16(A+(int64_t)lda*(int64_t)k_from+m_from,sa,lda,m_dim,k_dim);
@@ -968,14 +1119,13 @@ int get_gemm_task(uint64_t *task_end, int *m_start, int *n_start, int *m_end, in
     *m_start = mstart; *n_start = nstart; *m_end = mend; *n_end = nend;
   return 1;
 }
-void ftblas_dsymm_ft(int m,int n,int k,double alpha,double *A,int lda,double *B,int ldb,double beta,double *C,int ldc){
+void ftblas_dtrmm_ft(int m,int n,int k,double alpha,double *A,int lda,double *B,int ldb,double beta,double *C,int ldc){
   const int M = m, N = n, K = k, LDA = lda, LDB = ldb, LDC = ldc;
   const double ALPHA = alpha, BETA = beta;
 #ifdef TIMING
   double t_tot=0.,t_copy_a=0.,t_copy_b=0.,t_copy_c=0.,t_A_encoding=0.,t_my=0.;
-  double t0, t1;
 #endif
-  
+  double t0, t1;
   if(M<1||N<1) return;
 
   int MNK, MN;
@@ -989,7 +1139,7 @@ void ftblas_dsymm_ft(int m,int n,int k,double alpha,double *A,int lda,double *B,
 #ifdef TIMING
   t0=get_sec();
 #endif
-  symm_checksum_encoding_A_col_major(A,M,LDA,chk_A);
+  trmm_checksum_encoding_A_col_major(A,M,LDA,chk_A);
 #ifdef TIMING
   t1=get_sec();
   t_my+=(t1-t0);
@@ -1015,14 +1165,15 @@ void ftblas_dsymm_ft(int m,int n,int k,double alpha,double *A,int lda,double *B,
           t_copy_b+=(t1-t0);
 #endif
         }
-        for(m_count=0; m_count<M; m_count+=m_inc){
+        for(m_count=k_count; m_count<M; m_count+=m_inc){
           m_inc = M-m_count; if(m_inc>GEMM_R_M) m_inc = GEMM_R_M;
 	  adimleft = m_inc;
           while(get_copy_task(&adimleft,&copystart,&copyend)){
 #ifdef TIMING
             t0=get_sec();
 #endif
-            ocopy_symm(A,sa+copystart*k_inc,LDA,copyend-copystart,k_inc,m_count+copystart,k_count,chk_B+k_count,chk_online_C_col+m_count+copystart);
+            ocopy_trmm(A,sa+copystart*k_inc,LDA,copyend-copystart,k_inc,m_count+copystart,k_count,chk_B+k_count,chk_online_C_col+m_count+copystart);
+            //GEMM_ICOPY(m_count+copystart,copyend-copystart,k_count,k_inc,A,LDA,TRANSA,sa+copystart*k_inc,chk_B,chk_online_C_col);
 #ifdef TIMING
             t1=get_sec();
             t_copy_a+=(t1-t0);
@@ -1034,7 +1185,7 @@ void ftblas_dsymm_ft(int m,int n,int k,double alpha,double *A,int lda,double *B,
 #ifdef TIMING
               t0=get_sec();
 #endif
-              GEMM_BETA(C+n_start*LDC+m_start,LDC,BETA,m_end-m_start,n_end-n_start);
+              //GEMM_BETA(C+n_start*LDC+m_start,LDC,BETA,m_end-m_start,n_end-n_start);
 #ifdef TIMING
               t1=get_sec();
               t_copy_c+=(t1-t0);
@@ -1043,7 +1194,9 @@ void ftblas_dsymm_ft(int m,int n,int k,double alpha,double *A,int lda,double *B,
 #ifdef TIMING
             t0=get_sec();
 #endif
-            if(ALPHA != 0.0) GEMM_KERNEL(m_start,m_end-m_start,n_start,n_end-n_start,k_inc,ALPHA,sa+(m_start-m_count)*k_inc,sb+(n_start-n_count)*k_inc,C,LDC,chk_c_col+m_count,chk_c_row+n_count);
+            int tmp=helper(m_start,m_end,k_count,k_count+k_inc);
+            if(ALPHA != 0.0&&tmp==0) GEMM_KERNEL(m_start,m_end-m_start,n_start,n_end-n_start,k_inc,ALPHA,sa+(m_start-m_count)*k_inc,sb+(n_start-n_count)*k_inc,C,LDC,chk_c_col+m_count,chk_c_row+n_count);
+            else if (ALPHA != 0.0) TRMM_KERNEL(m_start,m_end-m_start,n_start,n_end-n_start,k_inc,ALPHA,sa+(m_start-m_count)*k_inc,sb+(n_start-n_count)*k_inc,C,LDC,m_start-k_count,chk_c_col+m_count,chk_c_row+n_count);
 #ifdef TIMING
             t1=get_sec();
             t_tot+=(t1-t0);
