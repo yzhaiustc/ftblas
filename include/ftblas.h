@@ -25,4 +25,14 @@ double ftblas_dnrm2_ft(const long int n, const double *x, const long int inc_x);
 void ftblas_dgemm_ft(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 void ftblas_dgemm_ori(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 
+void ftblas_dsymm_ft(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
+void ftblas_dsymm_ori(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
+
+void ftblas_dtrmm_ft(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
+void ftblas_dtrmm_ori(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
+
+void ftblas_dtrsm_ft(int m, int n, double alpha, double *A, int lda, double *B, int ldb);
+void ftblas_dtrsm_ori(int m, int n, double alpha, double *A, int lda, double *B, int ldb);
+
+
 #endif
