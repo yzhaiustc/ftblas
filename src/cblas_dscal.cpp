@@ -5,6 +5,6 @@ double cblas_dscal(const FTBLAS_INT n, const double alpha, const double *x, cons
 #ifdef FT_ENABLED
     ftblas_dscal_ft(n, alpha, x, inc_x);
 #else
-    ftblas_dscal_ori(n, x, alpha, inc_x);
+    ftblas_dscal_ori(n, alpha, x, inc_x);
 #endif
 }
