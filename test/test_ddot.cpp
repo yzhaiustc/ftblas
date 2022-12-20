@@ -43,10 +43,17 @@ int main(int argc, char* argv[])
 #endif
         printf("Testing M = %d:\n",m);
         
-        res_baseline = REF_DDOT(m, vec_x, inc_x, vec_y, inc_x);
-        res_ori = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
+        //res_baseline = REF_DDOT(m, vec_x, inc_x, vec_y, inc_x);
+        //res_ori = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
+
+        //test if the function can run
+        printf("test run\n");
+        res_baseline = cblas_dnrm2(m, vec_x, inc_x);
+        res_ori = REF_DNRM2(m, vec_x, inc_x);
+        //test code end here
 
         double diff = res_baseline - res_ori;
+        printf("res_baseline=%f,res_ori=%f\n",res_baseline,res_ori);
 
         if (fabs(diff) > 1e-3) {
             printf("Failed to pass the correctness verification. Exited.\n");
