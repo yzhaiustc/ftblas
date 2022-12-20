@@ -55,7 +55,6 @@ static void ori_dasum_kernel(long n, double *x, double *res)
 
 		"vmovsd		%%xmm1 ,    (%3)		\n\t"
 		"vzeroupper				\n\t"
-		"ret				\n\t"
 
 		: "+r"(i), // 0
 		  "+r"(n)  // 1

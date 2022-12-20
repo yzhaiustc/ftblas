@@ -6,10 +6,12 @@
 
 double REF_DDOT(long int n, double *x, long int inc_x, double *y, long int inc_y);
 
-void REF(long int n, double alpha, double *x, long int inc_x, double *y, long int inc_y){
-    for (int cnt_x = 0, cnt_y = 0; cnt_x < n && cnt_y < n; cnt_x += inc_x, cnt_y += inc_y) {
-        y[cnt_y] += (x[cnt_x] * alpha);
+double REF(long int n, double *x, long int inc_x){
+    double res =0.0;
+    for (int cnt_x = 0; cnt_x < n; cnt_x += inc_x) {
+        res += fabs(x[cnt_x]);
     }
+    return res;
 }
 
 int main(int argc, char* argv[])
@@ -72,15 +74,14 @@ int main(int argc, char* argv[])
         printf("after baseline computing x[1]=%f\n, y[1]=%f\n", vec_x[999999], vec_y[999999]);
         */
         
-        res_baseline = REF_DDOT(m, vec_x, inc_x, vec_y, inc_x);
-        printf("res_basline = %f\n", res_baseline);
+        res_baseline = REF(m, vec_x, inc_x);
         res_ori = cblas_dasum(m, vec_x, inc_x);
         
 
         //test code end here
 
         double diff = res_baseline - res_ori;
-        printf("res_baseline=%f,res_ori=%f\n",res_baseline,res_ori);
+        printf("res_baseline=%f, res_ori=%f\n",res_baseline, res_ori);
 
         if (fabs(diff) > 1e-3) {
             printf("Failed to pass the correctness verification. Exited.\n");

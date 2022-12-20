@@ -294,7 +294,6 @@ static long dasum_kernel(long n, double *x, double *res)
             "addq     $1  , %2                 \n\t"
 
             "4:                                        \n\t"
-            "ret                    \n\t"
 
             : "+r"(i), // 0
               "+r"(n), // 1
@@ -322,13 +321,11 @@ double ftblas_dasum_ft(const long int n, const double *x, const long int inc_x) 
     n1 = n & -32;
 
     if (n1 > 0) {
-      printf("kernel run\n");
-      printf("n1=%f, n=%f",n1, n);
       long int err_num = dasum_kernel(n1, (double *)x, &res);
       if (err_num) printf("detected error number %ld\n", err_num);
       i = n1;
     }
-    printf("res = %f\n", res);
+    //printf("res = %f\n", res);
     while (i < n) {
       res += fabs(x[i]);
       i++;
@@ -339,12 +336,12 @@ double ftblas_dasum_ft(const long int n, const double *x, const long int inc_x) 
   } else {
     long int inc = -4 * inc_x;
     long int n1 = n & inc;
-    printf("inc = %d, n1 = %d, n = %d\n", inc, n1, n);
+    //printf("inc = %d, n1 = %d, n = %d\n", inc, n1, n);
     register double sum1, sum2;
     sum1 = 0.0;
     sum2 = 0.0;
     while (j < n1) {
-      printf("j = %d, i = %d, x[%d] = %f, x[%d] = %f, x[%d] = %f, x[%d] = %f\n", j, i, i, x[i], i + inc_x, x[i + inc_x], i + 2 * inc_x, x[i + 2 * inc_x], i + 3 * inc_x, x[i + 3 * inc_x]);
+      //printf("j = %d, i = %d, x[%d] = %f, x[%d] = %f, x[%d] = %f, x[%d] = %f\n", j, i, i, x[i], i + inc_x, x[i + inc_x], i + 2 * inc_x, x[i + 2 * inc_x], i + 3 * inc_x, x[i + 3 * inc_x]);
       sum1 += fabs(x[i]);
       sum2 += fabs(x[i + inc_x]);
       sum1 += fabs(x[i + 2 * inc_x]);
@@ -356,7 +353,7 @@ double ftblas_dasum_ft(const long int n, const double *x, const long int inc_x) 
     }
     sumf = sum1 + sum2;
     while (i < n) {
-      printf("j = %d, n = %d, i = %d, inc_x = %d, sumf = %f, x[%d] = %f\n", j, n, i, inc_x, sumf, i, x[i]);
+      //printf("j = %d, n = %d, i = %d, inc_x = %d, sumf = %f, x[%d] = %f\n", j, n, i, inc_x, sumf, i, x[i]);
       sumf += fabs(x[i]);
       i += inc_x;
       j++;
