@@ -11,9 +11,11 @@ enum CBLAS_UPLO      {CblasUpper=121, CblasLower=122};
 enum CBLAS_DIAG      {CblasNonUnit=131, CblasUnit=132};
 enum CBLAS_SIDE      {CblasLeft=141, CblasRight=142};
 
+double cblas_dasum(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
 double cblas_daxpy(const FTBLAS_INT n, const double alpha, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
 double cblas_ddot(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
 double cblas_dnrm2(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
+double cblas_dscal(const FTBLAS_INT n, const double alpha, const double *x, const FTBLAS_INT inc_x);
 void cblas_dgemm(const CBLAS_ORDER Layout, const CBLAS_TRANSPOSE transa, const CBLAS_TRANSPOSE transb, \
     const FTBLAS_INT m, const FTBLAS_INT n, const FTBLAS_INT k, const double alpha, \
     const double *a, const FTBLAS_INT lda, const double *b, const FTBLAS_INT ldb,\

@@ -6,9 +6,18 @@
 
 double REF_DDOT(long int n, double *x, long int inc_x, double *y, long int inc_y);
 
+void REF(long int n, double alpha, double *x, long int inc_x, double *y, long int inc_y){
+     for (int cnt_x = 0, cnt_y = 0; cnt_x < n && cnt_y < n; cnt_x += inc_x, cnt_y += inc_y) {
+        y[cnt_y] += alpha * x[cnt_x];
+    }
+}
+
 int main(int argc, char* argv[])
 {
     int inc_x = 1;
+    
+    //use for daxpy test, remember to delete when push
+    int inc_y = 1;
 
     double *vec_x;
     double *vec_y;
@@ -43,13 +52,19 @@ int main(int argc, char* argv[])
 #endif
         printf("Testing M = %d:\n",m);
         
+        //test for ddot
         //res_baseline = REF_DDOT(m, vec_x, inc_x, vec_y, inc_x);
         //res_ori = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
 
-        //test if the function can run
+        //test if the function can run and accuracy
+        //dasum segmentfalut
         printf("test run\n");
-        res_baseline = cblas_dnrm2(m, vec_x, inc_x);
-        res_ori = REF_DNRM2(m, vec_x, inc_x);
+        double alpha = 2.0;
+        printf("before computing x[1]=%f\n, y[1]=%f\n", vec_x[1], vec_y[1]);
+        cblas_daxpy(m, alpha, vec_x, inc_x, vec_y, inc_y);
+        printf("after computing x[1]=%f\n, y[1]=%f\n", vec_x[1], vec_y[1]);
+        REF(m, alpha, vec_x, inc_x, vec_y, inc_y);
+        printf("after baseline computing x[1]=%f\n, y[1]=%f\n", vec_x[1], vec_y[1]);
         //test code end here
 
         double diff = res_baseline - res_ori;
