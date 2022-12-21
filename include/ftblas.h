@@ -19,6 +19,8 @@ double ftblas_dasum_ft(const long int n, const double *x, const long int inc_x);
 void ftblas_daxpy_ori(const long int n, const double alpha, const double *x, const long int inc_x, const double *y, const long int inc_y);
 void ftblas_daxpy_ft(const long int n, const double alpha, const double *x, const long int inc_x, const double *y, const long int inc_y);
 
+void ftblas_dcopy(const int n, const double *x, const int inc_x, const double *y, const int inc_y);
+
 double ftblas_ddot_ori(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y);
 double ftblas_ddot_ft(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y);
 

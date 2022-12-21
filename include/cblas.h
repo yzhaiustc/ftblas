@@ -13,6 +13,7 @@ enum CBLAS_SIDE      {CblasLeft=141, CblasRight=142};
 
 double cblas_dasum(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
 double cblas_daxpy(const FTBLAS_INT n, const double alpha, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
+double cblas_dcopy(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
 double cblas_ddot(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
 double cblas_dnrm2(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
 double cblas_dscal(const FTBLAS_INT n, const double alpha, const double *x, const FTBLAS_INT inc_x);
