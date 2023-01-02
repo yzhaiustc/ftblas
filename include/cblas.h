@@ -32,4 +32,21 @@ void cblas_dtrsm(const CBLAS_ORDER Layout, const CBLAS_SIDE side, const CBLAS_UP
     const FTBLAS_INT m, const FTBLAS_INT n, const double alpha, \
     const double *a, const FTBLAS_INT lda, const double *b, const FTBLAS_INT ldb);
 
+void cblas_dgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE transa,\
+                 const int m, const int n, \
+                 const double alpha, const double *a, const int lda, \
+                 const double *x, const int incx, \
+                 const double beta, double *y, const int incy);
+
+void cblas_dger(const CBLAS_ORDER order, \
+       const int m, const int n, \
+       const double alpha, \
+       const double *x, const int incx, \
+       const double *y, const int incy, \
+       double  *a, const int lda);
+
+void cblas_dtrsv(const CBLAS_ORDER order, const CBLAS_UPLO uplo, \
+       const CBLAS_TRANSPOSE transA, const CBLAS_DIAG diag, \
+       const int n, const double  *a, const int lda, double  *x, const int incx);
+
 #endif
