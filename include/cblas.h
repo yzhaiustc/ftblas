@@ -11,7 +11,24 @@ enum CBLAS_UPLO      {CblasUpper=121, CblasLower=122};
 enum CBLAS_DIAG      {CblasNonUnit=131, CblasUnit=132};
 enum CBLAS_SIDE      {CblasLeft=141, CblasRight=142};
 
+double cblas_dasum(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
+void cblas_daxpy(const FTBLAS_INT n, const double alpha, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
+void cblas_dcopy(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
 double cblas_ddot(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
+double cblas_dnrm2(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
+void cblas_drot(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y, const double c, const double s);
+void cblas_drotm(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y, const double *param);
+void cblas_dscal(const FTBLAS_INT n, const double alpha, const double *x, const FTBLAS_INT inc_x);
+double cblas_dsdot(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
+void cblas_dswap(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
+
+FTBLAS_INT cblas_idamax(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
+
+void cblas_saxpy(const FTBLAS_INT n, const float alpha, const float *x, const FTBLAS_INT inc_x, const float *y, const FTBLAS_INT inc_y);
+float cblas_sasum(const FTBLAS_INT n, const float *x, const FTBLAS_INT inc_x);
+void cblas_scopy(const FTBLAS_INT n, const float *x, const FTBLAS_INT inc_x, const float *y, const FTBLAS_INT inc_y);
+float cblas_sdot(const FTBLAS_INT n, const float *x, const FTBLAS_INT inc_x, const float *y, const FTBLAS_INT inc_y);
+
 void cblas_dgemm(const CBLAS_ORDER Layout, const CBLAS_TRANSPOSE transa, const CBLAS_TRANSPOSE transb, \
     const FTBLAS_INT m, const FTBLAS_INT n, const FTBLAS_INT k, const double alpha, \
     const double *a, const FTBLAS_INT lda, const double *b, const FTBLAS_INT ldb,\

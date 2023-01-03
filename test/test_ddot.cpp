@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
 
     double *vec_x;
     double *vec_y;
-
+    
     double res_baseline, res_ori;
 
     double t0, t1;
