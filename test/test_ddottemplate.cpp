@@ -8,7 +8,7 @@ double REF_DDOT(long int n, double *x, long int inc_x, double *y, long int inc_y
 
 int main(int argc, char* argv[])
 {
-    int inc_x = 1;
+    int inc_x = 1, inc_y =1;
 
     double *vec_x;
     double *vec_y;
@@ -43,6 +43,12 @@ int main(int argc, char* argv[])
 #endif
         printf("Testing M = %d:\n",m);
         
+        //test code here
+        vec_x[1] = vec_x[1] *2;
+        printf("vec_x[1]=%f, vec_y[1]=%f, \n",vec_x[1],  vec_y[1]);
+        cblas_dswap(m, vec_x, inc_x, vec_y, inc_y);
+        printf("vec_x[1]=%f, vec_y[1]=%f, \n",vec_x[1],  vec_y[1]);
+        /*
         res_baseline = REF_DDOT(m, vec_x, inc_x, vec_y, inc_x);
         res_ori = cblas_ddot(m, vec_x, inc_x, vec_y, inc_x);
 
@@ -67,6 +73,7 @@ int main(int argc, char* argv[])
 
         printf("Average elasped time: %f second, performance: %f GFLOPS.\n", \
             elapsed_time/TEST_COUNT, 2.*1e-9*TEST_COUNT * m / elapsed_time);
+        */
     }
 
     free(vec_x);
