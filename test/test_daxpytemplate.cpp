@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     double *vec_x_result;
     double *vec_y_result;
     
-    double res_baseline, res_ori;
+    double res_baseline, res;
 
     double t0, t1;
     double elapsed_time;
@@ -52,17 +52,18 @@ int main(int argc, char* argv[])
 
         randomize_matrix(vec_x, m, 1);
         randomize_matrix(vec_y, m, 1);
-        //copy_matrix(vec_x, vec_x_result, m);
-        //copy_matrix(vec_y, vec_y_result, m);
+        copy_matrix(vec_x, vec_x_result, m);
+        copy_matrix(vec_y, vec_y_result, m);
         
         double alpha = (double)(rand() % 100) + 0.01 * (rand() % 100);
         //REF_DAXPY(m, alpha, vec_x_result, inc_x, vec_y_result, inc_y);
         //cblas_daxpy(m, alpha, vec_x, inc_x, vec_y, inc_y);
         //REF_DSCAL(m, alpha, vec_x_result, inc_x);
         //cblas_dscal(m, alpha, vec_x, inc_x);
+       
+        //test code here
 
-        cblas_dcopy(m, vec_x, inc_x, vec_x_result, inc_y);
-        
+        /*
         double diff = 0.0;
 
         for(int i = 0; i <m; i+=inc_y){
@@ -91,8 +92,8 @@ int main(int argc, char* argv[])
 
         printf("Average elasped time: %f second, performance: %f GFLOPS.\n", \
             elapsed_time/TEST_COUNT, 2.*1e-9*TEST_COUNT * m / elapsed_time);
+        */
     }
-
     free(vec_x);
     free(vec_y);
     free(vec_x_result);

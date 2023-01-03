@@ -27,6 +27,12 @@ double ftblas_ddot_ft(const long int n, const double *x, const long int inc_x, c
 double ftblas_dnrm2_ori(const long int n, const double *x, const long int inc_x);
 double ftblas_dnrm2_ft(const long int n, const double *x, const long int inc_x);
 
+void ftblas_drot_ori(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y, const double c, const double s);
+void ftblas_drot_ft(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y, const double c, const double s);
+
+void ftblas_drotm_ori(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y, const double *param);
+void ftblas_drotm_ft(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y, const double *param);
+
 void ftblas_dscal_ori(const long int n, const double alpha, const double *x, const long int inc_x);
 void ftblas_dscal_ft(const long int n, const double alpha, const double *x, const long int inc_x);
 
