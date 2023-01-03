@@ -22,17 +22,7 @@ target_link_libraries(ddot IncludeFuncs SrcFuncs TestFuncs)
 add_executable(dgemm test/test_dgemm.cpp)
 target_link_libraries(dgemm IncludeFuncs SrcFuncs TestFuncs)
 
-#remeber to delete daxpytemplate and ddottemplate when finished and push
-
-add_executable(daxpytemplate test/test_daxpytemplate.cpp)
-target_link_libraries(daxpytemplate IncludeFuncs SrcFuncs TestFuncs)
-
-add_executable(ddottemplate test/test_ddottemplate.cpp)
-target_link_libraries(ddottemplate IncludeFuncs SrcFuncs TestFuncs)
-
 if(USE_FAULT_TOLERANT)
     target_compile_definitions(ddot PRIVATE FT_ENABLED=1)
     target_compile_definitions(dgemm PRIVATE FT_ENABLED=1)
-    target_compile_definitions(daxpytemplate PRIVATE FT_ENABLED=1)
-    target_compile_definitions(ddottemplate PRIVATE FT_ENABLED=1)
 endif(USE_FAULT_TOLERANT)
