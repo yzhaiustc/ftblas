@@ -41,6 +41,8 @@ double ftblas_dsdot_ft(const long int n, const double *x, const long int inc_x, 
 
 void ftblas_dswap(const int n, const double *x, const int inc_x, const double *y, const int inc_y);
 
+int ftblas_idamax_ft(const long int n, const double *x, const long int inc_x);
+
 void ftblas_dgemm_ft(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 void ftblas_dgemm_ori(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 

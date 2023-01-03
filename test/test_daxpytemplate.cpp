@@ -19,6 +19,7 @@ int main(int argc, char* argv[])
     double *vec_y_result;
     
     double res_baseline, res;
+    int res_int;
 
     double t0, t1;
     double elapsed_time;
@@ -62,8 +63,8 @@ int main(int argc, char* argv[])
         //cblas_dscal(m, alpha, vec_x, inc_x);
        
         //test code here
-        res = cblas_dsdot(m, vec_x, inc_x, vec_y, inc_y);
-        printf("res = %f\n", res);
+        res_int = cblas_idamax(m, vec_x, inc_x);
+        printf("res = %f\n", res_int);
         /*
         double diff = 0.0;
 
