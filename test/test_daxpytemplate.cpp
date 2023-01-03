@@ -17,9 +17,10 @@ int main(int argc, char* argv[])
     double *vec_y;
     double *vec_x_result;
     double *vec_y_result;
+    float *vec_x_f;
+    float *vec_y_f; 
     
     double res_baseline, res;
-    int res_int;
 
     double t0, t1;
     double elapsed_time;
@@ -36,8 +37,8 @@ int main(int argc, char* argv[])
     
     vec_x = (double *)malloc(sizeof(double) * max_size * 1);
     vec_y = (double *)malloc(sizeof(double) * max_size * 1);
-    vec_x_result = (double *)malloc(sizeof(double) * max_size * 1);
-    vec_y_result = (double *)malloc(sizeof(double) * max_size * 1);
+    vec_x_f = (float *)malloc(sizeof(double) * max_size * 1);
+    vec_y_f = (float *)malloc(sizeof(double) * max_size * 1);
     
     for (int i_count = 0; i_count < upper_limit; i_count++) {
         int m = SIZE[i_count];
@@ -55,6 +56,9 @@ int main(int argc, char* argv[])
         randomize_matrix(vec_y, m, 1);
         copy_matrix(vec_x, vec_x_result, m);
         copy_matrix(vec_y, vec_y_result, m);
+
+        float_randomize_matrix(vec_x_f, m, 1);
+        float_randomize_matrix(vec_y_f, m, 1);
         
         double alpha = (double)(rand() % 100) + 0.01 * (rand() % 100);
         //REF_DAXPY(m, alpha, vec_x_result, inc_x, vec_y_result, inc_y);
@@ -63,8 +67,7 @@ int main(int argc, char* argv[])
         //cblas_dscal(m, alpha, vec_x, inc_x);
        
         //test code here
-        res_int = cblas_idamax(m, vec_x, inc_x);
-        printf("res = %f\n", res_int);
+        
         /*
         double diff = 0.0;
 

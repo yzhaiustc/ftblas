@@ -21,7 +21,6 @@ void cblas_drotm(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, co
 void cblas_dscal(const FTBLAS_INT n, const double alpha, const double *x, const FTBLAS_INT inc_x);
 double cblas_dsdot(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
 void cblas_dswap(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x, const double *y, const FTBLAS_INT inc_y);
-FTBLAS_INT cblas_idamax(const FTBLAS_INT n, const double *x, const FTBLAS_INT inc_x);
 
 void cblas_dgemm(const CBLAS_ORDER Layout, const CBLAS_TRANSPOSE transa, const CBLAS_TRANSPOSE transb, \
     const FTBLAS_INT m, const FTBLAS_INT n, const FTBLAS_INT k, const double alpha, \
