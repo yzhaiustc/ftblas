@@ -36,6 +36,9 @@ void ftblas_drotm_ft(const long int n, const double *x, const long int inc_x, co
 void ftblas_dscal_ori(const long int n, const double alpha, const double *x, const long int inc_x);
 void ftblas_dscal_ft(const long int n, const double alpha, const double *x, const long int inc_x);
 
+double ftblas_dsdot_ori(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y);
+double ftblas_dsdot_ft(const long int n, const double *x, const long int inc_x, const double *y, const long int inc_y);
+
 void ftblas_dgemm_ft(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 void ftblas_dgemm_ori(int m, int n, int k, double alpha, double *A, int lda, double *B, int ldb, double beta, double *C, int ldc);
 

@@ -62,7 +62,8 @@ int main(int argc, char* argv[])
         //cblas_dscal(m, alpha, vec_x, inc_x);
        
         //test code here
-
+        res = cblas_dsdot(m, vec_x, inc_x, vec_y, inc_y);
+        printf("res = %f\n", res);
         /*
         double diff = 0.0;
 
