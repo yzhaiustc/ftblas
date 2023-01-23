@@ -31,7 +31,6 @@ void dsyr_compute(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, FTBLAS_INT n, 
             uplo = 0;
     }
 
-// TODO: Check for "if (incx==1) else buffer_x" required?
     if (uplo == 1) 
     {
         ftblas_dsyr_upp_row(n, alpha, x, incx, a, lda);
