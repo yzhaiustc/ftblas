@@ -66,4 +66,7 @@ void cblas_dtrsv(const CBLAS_ORDER order, const CBLAS_UPLO uplo, \
        const CBLAS_TRANSPOSE transA, const CBLAS_DIAG diag, \
        const int n, const double  *a, const int lda, double  *x, const int incx);
 
+void cblas_dsyr(const CBLAS_ORDER order, const CBLAS_UPLO uplo, const FTBLAS_INT n, const double alpha, const double *x,
+                const int incx, const double *a, const FTBLAS_INT lda);
+
 #endif
