@@ -31,11 +31,20 @@ void dsyr_compute(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, FTBLAS_INT n, 
             uplo = 0;
     }
 
-    if (uplo == 1) 
+    if (uplo == 1)
     {
+#ifdef FT_ENABLED
         ftblas_dsyr_upp_row(n, alpha, x, incx, a, lda);
-    } else
+#else
+        ftblas_dsyr_upp_row(n, alpha, x, incx, a, lda);
+#endif
+    }
+    else
     {
+#ifdef FT_ENABLED
         ftblas_dsyr_low_row(n, alpha, x, incx, a, lda);
+#else
+        ftblas_dsyr_low_row(n, alpha, x, incx, a, lda);
+#endif
     }
 }
