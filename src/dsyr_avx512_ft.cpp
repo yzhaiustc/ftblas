@@ -21,6 +21,9 @@ void ftblas_dsyr_upp_row(int n, double alpha, double *x, int incx, double *a, in
         ftblas_daxpy_ori(n - i, alpha * X[i], X + i, 1, a + (i * lda + i), 1);
 #endif
     }
+
+    if (incx != 1)
+        free(X);
 }
 
 void ftblas_dsyr_low_row(int n, double alpha, double *x, int incx, double *a, int lda)
@@ -43,4 +46,7 @@ void ftblas_dsyr_low_row(int n, double alpha, double *x, int incx, double *a, in
         ftblas_daxpy_ori(i + 1, alpha * X[i], X, 1, a + i * lda, 1);
 #endif
     }
+
+    if (incx != 1)
+        free(X);
 }
