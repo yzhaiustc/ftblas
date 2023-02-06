@@ -21,7 +21,7 @@ void ftblas_dspmv_low(int n, double alpha, double *ap, double *x, int incx, doub
         ftblas_dcopy(n, y, incy, Y, 1);
     }
 
-    int i, length;
+    int i;
     for (i = 0; i < n; i++)
     {
 #ifdef FT_ENABLED
@@ -70,7 +70,7 @@ void ftblas_dspmv_upp(int n, double alpha, double *ap, double *x, int incx, doub
         ftblas_dcopy(n, y, incy, Y, 1);
     }
 
-    int i, length;
+    int i;
     for (i = 0; i < n; i++)
     {
 
