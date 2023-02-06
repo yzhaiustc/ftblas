@@ -18,7 +18,7 @@ void ftblas_dspmv_low(int n, double alpha, double *ap, double *x, int incx, doub
     if (incy != 1)
     {
         Y = (double *)malloc(n * sizeof(double));
-        ftblas_dcopy(n, y, incx, Y, 1);
+        ftblas_dcopy(n, y, incy, Y, 1);
     }
 
     int i, length;
@@ -43,7 +43,10 @@ void ftblas_dspmv_low(int n, double alpha, double *ap, double *x, int incx, doub
         free(X);
 
     if (incy != 1)
+    {
+        ftblas_dcopy(n, Y, 1, y, incy);
         free(Y);
+    }
 }
 
 void ftblas_dspmv_upp(int n, double alpha, double *ap, double *x, int incx, double beta, double *y, int incy)
@@ -64,7 +67,7 @@ void ftblas_dspmv_upp(int n, double alpha, double *ap, double *x, int incx, doub
     if (incy != 1)
     {
         Y = (double *)malloc(n * sizeof(double));
-        ftblas_dcopy(n, y, incx, Y, 1);
+        ftblas_dcopy(n, y, incy, Y, 1);
     }
 
     int i, length;
@@ -92,5 +95,8 @@ void ftblas_dspmv_upp(int n, double alpha, double *ap, double *x, int incx, doub
         free(X);
 
     if (incy != 1)
+    {
+        ftblas_dcopy(n, Y, 1, y, incy);
         free(Y);
+    }
 }
