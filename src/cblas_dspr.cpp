@@ -19,18 +19,10 @@ void cblas_dspr_compute(const CBLAS_UPLO Uplo, const FTBLAS_INT n, const double 
 
     if (uplo == 1)
     {
-#ifdef FT_ENABLED
         ftblas_dspr_upp(n, alpha, (double *)x, incx, (double *)ap);
-#else
-        ftblas_dspr_upp(n, alpha, (double *)x, incx, (double *)ap);
-#endif
     }
     else
     {
-#ifdef FT_ENABLED
         ftblas_dspr_low(n, alpha, (double *)x, incx, (double *)ap);
-#else
-        ftblas_dspr_low(n, alpha, (double *)x, incx, (double *)ap);
-#endif
     }
 }
