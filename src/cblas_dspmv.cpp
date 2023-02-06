@@ -22,18 +22,10 @@ void cblas_dspmv_compute(const CBLAS_UPLO Uplo, const FTBLAS_INT n, const double
 
     if (uplo == 1)
     {
-#ifdef FT_ENABLED
         ftblas_dspmv_upp(n, alpha, (double *)ap, (double *)x, incx, beta, (double *)y, incy);
-#else
-        ftblas_dspmv_upp(n, alpha, (double *)ap, (double *)x, incx, beta, (double *)y, incy);
-#endif
     }
     else
     {
-#ifdef FT_ENABLED
         ftblas_dspmv_low(n, alpha, (double *)ap, (double *)x, incx, beta, (double *)y, incy);
-#else
-        ftblas_dspmv_low(n, alpha, (double *)ap, (double *)x, incx, beta, (double *)y, incy);
-#endif
     }
 }
