@@ -84,7 +84,7 @@ void ftblas_dtrsv_low_row_ori(double *A, int LDA, double *b, int n);
 void ftblas_dsyr_upp_row(int n, double alpha, double *x, int incx, double *a, int lda);
 void ftblas_dsyr_low_row(int n, double alpha, double *x, int incx, double *a, int lda);
 
-void ftblas_dbmv_upp(int n, int k, double alpha, double *a, int lda, double *x, int incx, double beta, double *y, int incy);
-void ftblas_dbmv_low(int n, int k, double alpha, double *a, int lda, double *x, int incx, double beta, double *y, int incy);
+void ftblas_dsbmv_upp(int n, int k, double alpha, double *a, int lda, double *x, int incx, double beta, double *y, int incy);
+void ftblas_dsbmv_low(int n, int k, double alpha, double *a, int lda, double *x, int incx, double beta, double *y, int incy);
 
 #endif

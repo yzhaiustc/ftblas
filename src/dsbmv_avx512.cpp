@@ -1,6 +1,6 @@
 #include "../include/ftblas.h"
 
-void ftblas_dbmv_low(int n, int k, double alpha, double *a, int lda, double *x,
+void ftblas_dsbmv_low(int n, int k, double alpha, double *a, int lda, double *x,
                      int incx, double beta, double *y, int incy)
 {
     double *X;
@@ -17,7 +17,7 @@ void ftblas_dbmv_low(int n, int k, double alpha, double *a, int lda, double *x,
     if (incy != 1)
     {
         Y = (double *)malloc(n * sizeof(double));
-        ftblas_dcopy(n, y, incx, Y, 1);
+        ftblas_dcopy(n, y, incy, Y, 1);
     }
 
     int i, length;
@@ -28,9 +28,9 @@ void ftblas_dbmv_low(int n, int k, double alpha, double *a, int lda, double *x,
             length = k;
 
 #ifdef FT_ENABLED
-        ftblas_daxpy_ft(length + 1, alpha * X[i], (a + i * lda) + k - i, 1, Y + i - length, 1);
+        ftblas_daxpy_ft(length + 1, alpha * X[i], (a + i * lda) + k - length, 1, Y + i - length, 1);
 #else
-        ftblas_daxpy_ori(length + 1, alpha * X[i], (a + i * lda) + k - i, 1, Y + i - length, 1);
+        ftblas_daxpy_ori(length + 1, alpha * X[i], (a + i * lda) + k - length, 1, Y + i - length, 1);
 #endif
 
 #ifdef FT_ENABLED
@@ -44,10 +44,13 @@ void ftblas_dbmv_low(int n, int k, double alpha, double *a, int lda, double *x,
         free(X);
 
     if (incy != 1)
+    {
+        ftblas_dcopy(n, Y, 1, y, incy);
         free(Y);
+    }
 }
 
-void ftblas_dbmv_upp(int n, int k, double alpha, double *a, int lda, double *x,
+void ftblas_dsbmv_upp(int n, int k, double alpha, double *a, int lda, double *x,
                      int incx, double beta, double *y, int incy)
 {
     double *X;
@@ -64,7 +67,7 @@ void ftblas_dbmv_upp(int n, int k, double alpha, double *a, int lda, double *x,
     if (incy != 1)
     {
         Y = (double *)malloc(n * sizeof(double));
-        ftblas_dcopy(n, y, incx, Y, 1);
+        ftblas_dcopy(n, y, incy, Y, 1);
     }
 
     int i, length;
@@ -91,5 +94,8 @@ void ftblas_dbmv_upp(int n, int k, double alpha, double *a, int lda, double *x,
         free(X);
 
     if (incy != 1)
+    {
+        ftblas_dcopy(n, Y, 1, y, incy);
         free(Y);
+    }
 }
