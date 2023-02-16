@@ -93,6 +93,9 @@ void ftblas_dspr_upp(int n, double alpha, double *x, int incx, double *ap);
 void ftblas_dspmv_low(int n, double alpha, double *ap, double *x, int incx, double beta, double *y, int incy);
 void ftblas_dspmv_upp(int n, double alpha, double *ap, double *x, int incx, double beta, double *y, int incy);
 
+void ftblas_dspr2_low(int n, double alpha, double *x, int incx, double *y, int incy, double *ap);
+void ftblas_dspr2_upp(int n, double alpha, double *x, int incx, double *y, int incy, double *ap);
+
 void ftblas_dsyr2_low(int n, double alpha, double *x, int incx, double *y, int incy, double *a, int lda);
 void ftblas_dsyr2_upp(int n, double alpha, double *x, int incx, double *y, int incy, double *a, int lda);
 
