@@ -45,9 +45,9 @@ void ftblas_dspr_upp(int n, double alpha, double *x, int incx, double *ap)
     for (i = 0; i < n; i++)
     {
 #ifdef FT_ENABLED
-        ftblas_daxpy_ft(n - 1, alpha * X[i], X + i, 1, AP, 1);
+        ftblas_daxpy_ft(n - i, alpha * X[i], X + i, 1, AP, 1);
 #else
-        ftblas_daxpy_ori(n - 1, alpha * X[i], X + i, 1, AP, 1);
+        ftblas_daxpy_ori(n - i, alpha * X[i], X + i, 1, AP, 1);
 #endif
         AP += n - i;
     }
