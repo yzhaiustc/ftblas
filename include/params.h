@@ -1,0 +1,1 @@
+#define DTB_ENTRIES         256
