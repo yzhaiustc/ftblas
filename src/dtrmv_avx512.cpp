@@ -75,7 +75,10 @@ void ftblas_dtrmv_low(int uplo, int trans, int unit, int n, double *a, int lda, 
     }
 
     if (incx != 1)
+    {
+        ftblas_dcopy(n, X, 1, x, incx);
         free(X);
+    }
 }
 
 void ftblas_dtrmv_upp(int uplo, int trans, int unit, int n, double *a, int lda, double *x, int incx)
@@ -152,5 +155,8 @@ void ftblas_dtrmv_upp(int uplo, int trans, int unit, int n, double *a, int lda, 
     }
 
     if (incx != 1)
+    {
+        ftblas_dcopy(n, X, 1, x, incx);
         free(X);
+    }
 }
