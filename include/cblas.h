@@ -83,6 +83,9 @@ void cblas_dspr2(const CBLAS_ORDER order, const CBLAS_UPLO uplo, const FTBLAS_IN
 void cblas_dsyr2(const CBLAS_ORDER order, const CBLAS_UPLO uplo, const FTBLAS_INT n, const double alpha,
                  const double *x, const int incx, const double *y, const int incy, const double *a, const FTBLAS_INT lda);
 
+void cblas_dtbmv(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans, const CBLAS_DIAG Diag,
+                const FTBLAS_INT n, const FTBLAS_INT k, const double *a, const FTBLAS_INT lda, const double *x, const int incx);
+
 void cblas_dtrmv(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans, const CBLAS_DIAG Diag,
                 const FTBLAS_INT n, const double *a, const FTBLAS_INT lda, const double *x, const int incx);
 
