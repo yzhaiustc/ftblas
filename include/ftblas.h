@@ -99,4 +99,7 @@ void ftblas_dspr2_upp(int n, double alpha, double *x, int incx, double *y, int i
 void ftblas_dsyr2_low(int n, double alpha, double *x, int incx, double *y, int incy, double *a, int lda);
 void ftblas_dsyr2_upp(int n, double alpha, double *x, int incx, double *y, int incy, double *a, int lda);
 
+void ftblas_dtrmv_upp(int uplo, int trans, int unit, int n, double *a, int lda, double *x, int incx);
+void ftblas_dtrmv_low(int uplo, int trans, int unit, int n, double *a, int lda, double *x, int incx);
+
 #endif
