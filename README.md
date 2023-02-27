@@ -38,6 +38,9 @@ One then should be able to explore the example binaries or one's own application
 
 Currently we most emphasize the double-precision and include other data types in future roadmap. The table below summarizes the sub-routines currently supported by FT-BLAS. 
 
+## Developers
+
+Yujia Zhai, Vineeth Suvarna, Boyi Zhang 
 
 
 
