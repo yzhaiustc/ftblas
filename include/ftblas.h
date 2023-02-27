@@ -108,4 +108,7 @@ void ftblas_dtbsv_low(int uplo, int trans, int unit, int n, int k, double *a, in
 void ftblas_dtrmv_upp(int uplo, int trans, int unit, int n, double *a, int lda, double *x, int incx);
 void ftblas_dtrmv_low(int uplo, int trans, int unit, int n, double *a, int lda, double *x, int incx);
 
+void ftblas_dtpmv_upp(int uplo, int trans, int unit, int n, double *ap, int lda, double *x, int incx);
+void ftblas_dtpmv_low(int uplo, int trans, int unit, int n, double *ap, int lda, double *x, int incx);
+
 #endif
