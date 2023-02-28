@@ -2,16 +2,16 @@
 #include "../include/cblas.h"
 
 void cblas_dtpmv_compute(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans, const CBLAS_DIAG Diag,
-                   FTBLAS_INT n, double *ap, FTBLAS_INT lda, double *x, int incx);
+                   FTBLAS_INT n, double *ap, double *x, int incx);
 
 void cblas_dtpmv(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans, const CBLAS_DIAG Diag,
-                const FTBLAS_INT n, const double *ap, const FTBLAS_INT lda, const double *x, const int incx)
+                const FTBLAS_INT n, const double *ap, const double *x, const int incx)
 {
-    cblas_dtpmv_compute(layout, Uplo, Trans, Diag, n, (double *)ap, lda, (double *)x, incx);
+    cblas_dtpmv_compute(layout, Uplo, Trans, Diag, n, (double *)ap, (double *)x, incx);
 }
 
 void cblas_dtpmv_compute(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans, const CBLAS_DIAG Diag,
-                   FTBLAS_INT n, double *ap, FTBLAS_INT lda, double *x, int incx)
+                   FTBLAS_INT n, double *ap, double *x, int incx)
 {
     int trans, uplo, unit, info;
     if (layout == CblasColMajor)
@@ -52,10 +52,10 @@ void cblas_dtpmv_compute(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const 
 
     if (uplo == trans)
     {
-        ftblas_dtpmv_upp(uplo, trans, unit, n, ap, lda, x, incx);
+        ftblas_dtpmv_upp(uplo, trans, unit, n, ap, x, incx);
     }
     else
     {
-        ftblas_dtpmv_low(uplo, trans, unit, n, ap, lda, x, incx);
+        ftblas_dtpmv_low(uplo, trans, unit, n, ap, x, incx);
     }
 }
