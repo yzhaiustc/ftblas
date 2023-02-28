@@ -1,7 +1,7 @@
 #include "../include/ftblas.h"
 #include "../include/params.h"
 
-void ftblas_dtpmv_low(int uplo, int trans, int unit, int n, double *a, int lda, double *x, int incx)
+void ftblas_dtpmv_low(int uplo, int trans, int unit, int n, double *a, double *x, int incx)
 {
     double *X, *A;
     X = x;
@@ -63,7 +63,7 @@ void ftblas_dtpmv_low(int uplo, int trans, int unit, int n, double *a, int lda, 
     }
 }
 
-void ftblas_dtpmv_upp(int uplo, int trans, int unit, int n, double *a, int lda, double *x, int incx)
+void ftblas_dtpmv_upp(int uplo, int trans, int unit, int n, double *a, double *x, int incx)
 {
     double *X, *A;
     X = x;
