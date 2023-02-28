@@ -95,4 +95,6 @@ void cblas_dtrmv(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TR
 void cblas_dtpmv(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans, const CBLAS_DIAG Diag,
                 const FTBLAS_INT n, const double *ap, const FTBLAS_INT lda, const double *x, const int incx);
 
+void cblas_dtpsv(const CBLAS_ORDER layout, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans, const CBLAS_DIAG Diag,
+                const FTBLAS_INT n, const double *ap, const double *x, const int incx);
 #endif
