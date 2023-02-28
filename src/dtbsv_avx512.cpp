@@ -38,7 +38,7 @@ void ftblas_dtbsv_low(int uplo, int trans, int unit, int n, int k, double *a, in
             }
             else
             {
-                X[i] *= A[0];
+                X[i] /= A[0];
             }
         }
 
